@@ -1,0 +1,52 @@
+# Dependencies
+node_modules
+claude-agent-sdk-typescript
+
+# Build output
+dist
+out
+
+# macOS
+.DS_Store
+*.icloud
+
+# IDE / Editor
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ESLint cache
+.eslintcache
+
+# Logs
+*.log*
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Temporary build staging
+build/claude-staging
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+
+# NPM config
+.npmrc
