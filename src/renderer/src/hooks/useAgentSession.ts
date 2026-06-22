@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { toast } from '@heroui/react'
 import { createUserChatMessage, flushPendingProjectFileWrite, useProjectStore } from '../stores/projectStore'
 import { useDeviceStore } from '../stores/deviceStore'
+import { useOnboardingStore } from '../stores/onboardingStore'
 import { groupMessagesIntoTurns, mergeAssistantParts } from '../utils/conversation/chatTurns'
 import type {
   CreateUserModelConfigPayload,
@@ -47,6 +48,9 @@ export function useAgentSession() {
   const thinkingMetaRef = useRef<Record<string, { startedAt: number; turnId: string }>>({})
   const filesChangedByConvIdRef = useRef<Record<string, boolean>>({})
 
+  const onboardingOpen = useOnboardingStore((s) => s.isOpen)
+  const prevOnboardingOpenRef = useRef(onboardingOpen)
+
   const isThinking = selectedConvId ? (thinkingByConvId[selectedConvId] ?? false) : false
   const thinkingStartedAt = selectedConvId ? thinkingStartedAtByConvId[selectedConvId] : undefined
   const isInterrupting = selectedConvId ? (interruptingByConvId[selectedConvId] ?? false) : false
@@ -87,8 +91,8 @@ export function useAgentSession() {
     [setTurnDuration]
   )
 
-  useEffect(() => {
-    void window.ipc.model
+  const reloadModels = useCallback(() => {
+    return window.ipc.model
       .list()
       .then((models) => {
         setUserModels(models)
@@ -103,6 +107,18 @@ export function useAgentSession() {
         )
       })
   }, [])
+
+  useEffect(() => {
+    void reloadModels()
+  }, [reloadModels])
+
+  useEffect(() => {
+    const wasOpen = prevOnboardingOpenRef.current
+    prevOnboardingOpenRef.current = onboardingOpen
+    if (wasOpen && !onboardingOpen) {
+      void reloadModels()
+    }
+  }, [onboardingOpen, reloadModels])
 
   useEffect(() => {
     const offMessage = window.ipc.agent.onMessage((event) => {
