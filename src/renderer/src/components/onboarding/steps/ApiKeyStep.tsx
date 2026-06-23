@@ -1,6 +1,8 @@
 import React from 'react'
 import { Input, TextField } from '@heroui/react'
+import type { ModelConnectionTestResult } from '../../../../../shared/types'
 import FieldExampleHints from '../../model/FieldExampleHints'
+import ModelConnectionTestButton from '../../model/ModelConnectionTestButton'
 import { BASE_URL_EXAMPLES, MODEL_ID_EXAMPLES } from '../../../utils/model/modelFieldExamples'
 import { DEFAULT_CUSTOM_MODEL_ID } from '../constants'
 
@@ -11,10 +13,13 @@ export interface ApiKeyStepProps {
   baseUrl: string
   hasExistingModels: boolean
   isBusy: boolean
+  isTesting: boolean
+  testResult: ModelConnectionTestResult | null
   onDisplayNameChange: (v: string) => void
   onModelIdChange: (v: string) => void
   onApiKeyChange: (v: string) => void
   onBaseUrlChange: (v: string) => void
+  onTest: () => void
 }
 
 export default function ApiKeyStep({
@@ -24,10 +29,13 @@ export default function ApiKeyStep({
   baseUrl,
   hasExistingModels,
   isBusy,
+  isTesting,
+  testResult,
   onDisplayNameChange,
   onModelIdChange,
   onApiKeyChange,
-  onBaseUrlChange
+  onBaseUrlChange,
+  onTest
 }: ApiKeyStepProps): React.JSX.Element {
   return (
     <div className="flex flex-col gap-4">
@@ -102,6 +110,14 @@ export default function ApiKeyStep({
           disabled={isBusy}
         />
       </div>
+
+      <ModelConnectionTestButton
+        className="pt-1 border-t border-[var(--border)]"
+        isTesting={isTesting}
+        testResult={testResult}
+        onTest={onTest}
+        disabled={isBusy}
+      />
     </div>
   )
 }

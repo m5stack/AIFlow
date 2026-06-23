@@ -15,11 +15,13 @@ import {
 } from '@heroui/react'
 import type {
   CreateUserModelConfigPayload,
+  ModelConnectionTestResult,
   UpdateUserModelConfigPayload,
   UserModelConfig
 } from '../../../../shared/types'
 import { TrashIcon } from '../icons/Icons'
 import FieldExampleHints from '../model/FieldExampleHints'
+import ModelConnectionTestButton from '../model/ModelConnectionTestButton'
 import type { ChatModelOption } from '../../types/model'
 import { BASE_URL_EXAMPLES, MODEL_ID_EXAMPLES } from '../../utils/model/modelFieldExamples'
 
@@ -54,8 +56,10 @@ export default function ConversationModelConfigDialog({
   const [disableNonessentialTraffic, setDisableNonessentialTraffic] = useState(true)
   const [isSavingModel, setIsSavingModel] = useState(false)
   const [isDeletingModel, setIsDeletingModel] = useState(false)
+  const [isTesting, setIsTesting] = useState(false)
+  const [testResult, setTestResult] = useState<ModelConnectionTestResult | null>(null)
 
-  const isBusy = isSavingModel || isDeletingModel
+  const isBusy = isSavingModel || isDeletingModel || isTesting
 
   useEffect(() => {
     if (!isOpen) return
@@ -72,7 +76,13 @@ export default function ConversationModelConfigDialog({
       setApiKey('')
       setDisableNonessentialTraffic(true)
     }
+    setTestResult(null)
   }, [isOpen, mode, model])
+
+  useEffect(() => {
+    if (!isOpen) return
+    setTestResult(null)
+  }, [isOpen, modelName, modelId, apiKey, baseUrl])
 
   const handleClose = (): void => {
     if (isBusy) return
@@ -102,6 +112,38 @@ export default function ConversationModelConfigDialog({
       onClose()
     } finally {
       setIsSavingModel(false)
+    }
+  }
+
+  const handleTestConnection = async (): Promise<void> => {
+    const trimmedModelId = modelId.trim()
+    const trimmedApiKey = apiKey.trim()
+    if (!trimmedModelId) {
+      setTestResult({ ok: false, message: 'Model ID is required.' })
+      return
+    }
+    if (!trimmedApiKey && !(mode === 'edit' && model)) {
+      setTestResult({ ok: false, message: 'API key is required.' })
+      return
+    }
+
+    setIsTesting(true)
+    setTestResult(null)
+    try {
+      const result = await window.ipc.model.test({
+        model: trimmedModelId,
+        apiKey: trimmedApiKey || undefined,
+        baseUrl: baseUrl.trim() || undefined,
+        modelId: mode === 'edit' ? model?.id : undefined
+      })
+      setTestResult(result)
+    } catch (error) {
+      setTestResult({
+        ok: false,
+        message: error instanceof Error ? error.message : 'Connection test failed.'
+      })
+    } finally {
+      setIsTesting(false)
     }
   }
 
@@ -209,6 +251,14 @@ export default function ConversationModelConfigDialog({
                   disabled={isBusy}
                 />
               </div>
+
+              <ModelConnectionTestButton
+                className="pt-1 border-t border-[var(--border)]"
+                isTesting={isTesting}
+                testResult={testResult}
+                onTest={handleTestConnection}
+                disabled={isSavingModel || isDeletingModel}
+              />
             </ModalBody>
 
             <ModalFooter className="flex justify-between gap-2 px-2">

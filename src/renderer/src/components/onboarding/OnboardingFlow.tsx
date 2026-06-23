@@ -9,6 +9,7 @@ import {
   ModalFooter,
   toast
 } from '@heroui/react'
+import type { ModelConnectionTestResult } from '../../../../shared/types'
 import { bindDevice } from '../../api/device'
 import { useClientIdStore } from '../../stores/clientIdStore'
 import { useDeviceStore } from '../../stores/deviceStore'
@@ -51,6 +52,8 @@ export default function OnboardingFlow(): React.JSX.Element {
   const [projectName, setProjectName] = useState('My Project')
   const [showFlashDialog, setShowFlashDialog] = useState(false)
   const [isBusy, setIsBusy] = useState(false)
+  const [isTesting, setIsTesting] = useState(false)
+  const [testResult, setTestResult] = useState<ModelConnectionTestResult | null>(null)
 
   useEffect(() => {
     if (!isOpen) return
@@ -65,6 +68,8 @@ export default function OnboardingFlow(): React.JSX.Element {
     setProjectName('My Project')
     setShowFlashDialog(false)
     setIsBusy(false)
+    setIsTesting(false)
+    setTestResult(null)
 
     void fetchDevices()
     void window.ipc.model.list().then((models) => {
@@ -85,6 +90,11 @@ export default function OnboardingFlow(): React.JSX.Element {
     }
   }, [isOpen, devices.length])
 
+  useEffect(() => {
+    if (!isOpen || step !== 1) return
+    setTestResult(null)
+  }, [isOpen, step, displayName, modelId, apiKey, baseUrl])
+
   const handleClose = (): void => {
     if (isBusy) return
     close()
@@ -101,6 +111,37 @@ export default function OnboardingFlow(): React.JSX.Element {
       (deviceMode === 'select' && !!selectedDeviceId) ||
       (deviceMode === 'pair' && pairCodeValid))
   const canProceedStep3 = !isBusy && projectName.trim().length > 0
+
+  const handleTestConnection = async (): Promise<void> => {
+    const trimmedModelId = modelId.trim()
+    const trimmedApiKey = apiKey.trim()
+    if (!trimmedModelId) {
+      setTestResult({ ok: false, message: 'Model ID is required.' })
+      return
+    }
+    if (!trimmedApiKey) {
+      setTestResult({ ok: false, message: 'API key is required.' })
+      return
+    }
+
+    setIsTesting(true)
+    setTestResult(null)
+    try {
+      const result = await window.ipc.model.test({
+        model: trimmedModelId,
+        apiKey: trimmedApiKey,
+        baseUrl: baseUrl.trim() || undefined
+      })
+      setTestResult(result)
+    } catch (error) {
+      setTestResult({
+        ok: false,
+        message: error instanceof Error ? error.message : 'Connection test failed.'
+      })
+    } finally {
+      setIsTesting(false)
+    }
+  }
 
   const handleStep1Next = async (): Promise<void> => {
     if (!canProceedStep1) return
@@ -236,11 +277,14 @@ export default function OnboardingFlow(): React.JSX.Element {
                       apiKey={apiKey}
                       baseUrl={baseUrl}
                       hasExistingModels={hasExistingModels}
-                      isBusy={isBusy}
+                      isBusy={isBusy || isTesting}
+                      isTesting={isTesting}
+                      testResult={testResult}
                       onDisplayNameChange={setDisplayName}
                       onModelIdChange={setModelId}
                       onApiKeyChange={setApiKey}
                       onBaseUrlChange={setBaseUrl}
+                      onTest={handleTestConnection}
                     />
                   )}
 
@@ -288,6 +332,7 @@ export default function OnboardingFlow(): React.JSX.Element {
                     onPress={handleNext}
                     isDisabled={
                       isBusy ||
+                      isTesting ||
                       (step === 1 && !canProceedStep1) ||
                       (step === 2 && !canProceedStep2) ||
                       (step === 3 && !canProceedStep3)

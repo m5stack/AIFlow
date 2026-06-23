@@ -110,6 +110,19 @@ export interface UpdateUserModelConfigPayload {
   disableNonessentialTraffic?: boolean
 }
 
+export interface ModelConnectionTestPayload {
+  model: string
+  apiKey?: string
+  baseUrl?: string
+  modelId?: string
+}
+
+export interface ModelConnectionTestResult {
+  ok: boolean
+  message: string
+  status?: number
+}
+
 export interface AgentActiveDevice {
   id: string
   name: string

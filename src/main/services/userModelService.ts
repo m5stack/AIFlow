@@ -4,9 +4,12 @@ import { mkdir, readFile, writeFile } from 'fs/promises'
 import { dirname, join } from 'path'
 import type {
   CreateUserModelConfigPayload,
+  ModelConnectionTestPayload,
+  ModelConnectionTestResult,
   UpdateUserModelConfigPayload,
   UserModelConfig
 } from '../../shared/types'
+import { testModelConnectionRequest } from './modelConnectionTest'
 
 type StoredUserModelConfig = UserModelConfig & {
   encryptedApiKey: string
@@ -105,6 +108,30 @@ export class UserModelService {
       models: file.models.map((item) => (item.id === modelId ? next : item))
     })
     return this.toPublicModel(next)
+  }
+
+  async testModelConnection(
+    payload: ModelConnectionTestPayload
+  ): Promise<ModelConnectionTestResult> {
+    const model = payload.model.trim()
+    if (!model) {
+      return { ok: false, message: 'Model ID is required.' }
+    }
+
+    let apiKey = payload.apiKey?.trim()
+    if (!apiKey && payload.modelId) {
+      const credentials = await this.getCredentials(payload.modelId)
+      apiKey = credentials?.apiKey
+    }
+    if (!apiKey) {
+      return { ok: false, message: 'API key is required.' }
+    }
+
+    return testModelConnectionRequest({
+      model,
+      apiKey,
+      baseUrl: payload.baseUrl?.trim() || undefined
+    })
   }
 
   async getCredentials(

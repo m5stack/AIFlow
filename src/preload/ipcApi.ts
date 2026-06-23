@@ -14,6 +14,8 @@ import type {
   CreateProjectPayload,
   CreateUserModelConfigPayload,
   LegacyProjectPayload,
+  ModelConnectionTestPayload,
+  ModelConnectionTestResult,
   ProjectConversation,
   ProjectFileContent,
   ProjectFileNode,
@@ -86,6 +88,7 @@ export interface ModelAPI {
   create(payload: CreateUserModelConfigPayload): Promise<UserModelConfig>
   update(modelId: string, payload: UpdateUserModelConfigPayload): Promise<UserModelConfig>
   delete(modelId: string): Promise<void>
+  test(payload: ModelConnectionTestPayload): Promise<ModelConnectionTestResult>
 }
 
 export interface FirmwareAPI {

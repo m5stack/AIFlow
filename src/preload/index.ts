@@ -16,6 +16,8 @@ import type {
   CreateUserModelConfigPayload,
   CreateProjectPayload,
   LegacyProjectPayload,
+  ModelConnectionTestPayload,
+  ModelConnectionTestResult,
   ProjectConversation,
   ProjectFileContent,
   ProjectFileNode,
@@ -179,6 +181,9 @@ const ipc: IpcAPI = {
     },
     delete(modelId: string): Promise<void> {
       return ipcRenderer.invoke('model:delete', modelId)
+    },
+    test(payload: ModelConnectionTestPayload): Promise<ModelConnectionTestResult> {
+      return ipcRenderer.invoke('model:test', payload)
     }
   },
   serial: {
