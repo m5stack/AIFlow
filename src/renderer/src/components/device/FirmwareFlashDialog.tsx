@@ -39,6 +39,16 @@ import {
   UIFLOW2_NVS_DEFAULTS
 } from '../../utils/device/uiflow2Nvs'
 
+const CONNECT_TIMEOUT_MS = 30000
+const DISCONNECT_TIMEOUT_MS = 5000
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), ms)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer)) as Promise<T>
+}
 
 interface SerialPortInfo {
   portId: string
@@ -59,6 +69,7 @@ export default function FirmwareFlashDialog({
   onClose
 }: FirmwareFlashDialogProps): React.JSX.Element | null {
   const [isFlashing, setIsFlashing] = useState(false)
+  const [flashSucceeded, setFlashSucceeded] = useState(false)
   const [isSelectingPort, setIsSelectingPort] = useState(false)
   const [flashProgress, setFlashProgress] = useState(0)
   const [flashLogs, setFlashLogs] = useState<string[]>([])
@@ -86,6 +97,7 @@ export default function FirmwareFlashDialog({
 
     setFlashLogs([])
     setFlashProgress(0)
+    setFlashSucceeded(false)
     setSelectedPort(null)
     setSelectedFirmwareId(DEFAULT_BUNDLED_FIRMWARE_ID)
     setServer(UIFLOW2_DEFAULT_SERVER)
@@ -174,6 +186,7 @@ export default function FirmwareFlashDialog({
     }
 
     setIsFlashing(true)
+    setFlashSucceeded(false)
     setFlashProgress(0)
     appendFlashLog('Port ready. Loading bundled firmware...')
 
@@ -209,7 +222,11 @@ export default function FirmwareFlashDialog({
       const loader = new ESPLoader({ transport, baudrate: 115200, terminal, debugLogging: false })
 
       appendFlashLog('Connecting to device bootloader...')
-      await loader.main('default_reset')
+      await withTimeout(
+        loader.main('default_reset'),
+        CONNECT_TIMEOUT_MS,
+        `Connection timed out after ${CONNECT_TIMEOUT_MS / 1000}s. Put the device in download mode and try again.`
+      )
 
       appendFlashLog('Writing flash, please wait...')
       await loader.writeFlash({
@@ -228,17 +245,22 @@ export default function FirmwareFlashDialog({
       resetDone = true
       setFlashProgress(100)
       appendFlashLog('Flash completed successfully.')
+      setFlashSucceeded(true)
     } catch (error) {
       appendFlashLog(`Flash failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
+      setIsFlashing(false)
       if (transport && !resetDone) {
         try {
-          await transport.disconnect()
+          await withTimeout(
+            transport.disconnect(),
+            DISCONNECT_TIMEOUT_MS,
+            'Disconnect timed out'
+          )
         } catch {
-          /* already closed */
+          /* already closed or timed out */
         }
       }
-      setIsFlashing(false)
     }
   }
 
@@ -431,12 +453,16 @@ export default function FirmwareFlashDialog({
                 </Button>
                 <Button
                   variant="primary"
-                  isDisabled={isFlashing || isSelectingPort || !selectedPort}
+                  isDisabled={(isFlashing || isSelectingPort || !selectedPort) && !flashSucceeded}
                   onPress={() => {
+                    if (flashSucceeded) {
+                      onClose()
+                      return
+                    }
                     handleFlashFirmware()
                   }}
                 >
-                  {isFlashing ? 'Flashing...' : 'Start Flash'}
+                  {isFlashing ? 'Flashing...' : flashSucceeded ? 'Finished' : 'Start Flash'}
                 </Button>
               </ModalFooter>
             </ModalDialog>
