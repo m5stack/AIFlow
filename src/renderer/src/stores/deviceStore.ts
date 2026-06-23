@@ -1,11 +1,11 @@
 import { create } from 'zustand'
 import { getDevicesByTempId, renameDevice as renameDeviceApi, unbindDevice as unbindDeviceApi } from '../api/device'
 import type { DeviceItem } from '../types/device'
+import { useClientIdStore } from './clientIdStore'
 
 export type { DeviceItem }
 
 interface DeviceStoreState {
-  tempId: string
   devices: DeviceItem[]
   addDevice: (device: DeviceItem) => void
   removeDevice: (id: string) => void
@@ -16,9 +16,6 @@ interface DeviceStoreState {
 }
 
 const DEVICE_STORAGE_KEY = 'vibe:devices'
-const DEVICE_TEMP_ID_KEY = 'vibe:deviceTempId'
-
-const sanitizeTempId = (value: string): string => value.replace(/-/g, '')
 
 const safeParseDevices = (): DeviceItem[] => {
   const raw = localStorage.getItem(DEVICE_STORAGE_KEY)
@@ -31,33 +28,11 @@ const safeParseDevices = (): DeviceItem[] => {
   }
 }
 
-const createTempId = (): string => {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return sanitizeTempId(crypto.randomUUID())
-  }
-  return `temp${Date.now()}${Math.floor(Math.random() * 1000000)}`
-}
-
-const getOrCreateTempId = (): string => {
-  const existing = localStorage.getItem(DEVICE_TEMP_ID_KEY)
-  if (existing) {
-    const sanitized = sanitizeTempId(existing)
-    if (sanitized !== existing) {
-      localStorage.setItem(DEVICE_TEMP_ID_KEY, sanitized)
-    }
-    return sanitized
-  }
-  const next = createTempId()
-  localStorage.setItem(DEVICE_TEMP_ID_KEY, next)
-  return next
-}
-
 const persistDevices = (devices: DeviceItem[]): void => {
   localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(devices))
 }
 
 export const useDeviceStore = create<DeviceStoreState>((set, get) => ({
-  tempId: getOrCreateTempId(),
   devices: safeParseDevices(),
   addDevice: (device) => {
     set((state) => {
@@ -77,8 +52,8 @@ export const useDeviceStore = create<DeviceStoreState>((set, get) => ({
     })
   },
   unbindDevice: async (deviceId) => {
-    const { tempId } = get()
-    await unbindDeviceApi({ tempId, deviceId })
+    const { clientId } = useClientIdStore.getState()
+    await unbindDeviceApi({ tempId: clientId, deviceId })
     get().removeDevice(deviceId)
   },
   renameDevice: async (deviceId, name) => {
@@ -93,9 +68,9 @@ export const useDeviceStore = create<DeviceStoreState>((set, get) => ({
     set({ devices })
   },
   fetchDevices: async () => {
-    const { tempId } = get()
+    const { clientId } = useClientIdStore.getState()
     try {
-      const devices = await getDevicesByTempId(tempId)
+      const devices = await getDevicesByTempId(clientId)
       persistDevices(devices)
       set({ devices })
     } catch {

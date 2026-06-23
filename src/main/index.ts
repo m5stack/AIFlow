@@ -2,10 +2,12 @@ import { app, shell, BrowserWindow, Menu, screen } from 'electron'
 import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { registerAgentIpc } from './ipc/agentIpc'
+import { registerClientIdIpc } from './ipc/clientIdIpc'
 import { registerModelIpc } from './ipc/modelIpc'
 import { registerFirmwareIpc } from './ipc/firmwareIpc'
 import { registerProjectIpc } from './ipc/projectIpc'
 import { registerSerialIpc, registerSerialPortSelectedIpc } from './ipc/serialIpc'
+import { ClientIdService } from './services/clientIdService'
 import { ProjectService } from './services/projectService'
 import { UserModelService } from './services/userModelService'
 
@@ -112,8 +114,10 @@ app.whenReady().then(() => {
   }
   const projectService = new ProjectService()
   const userModelService = new UserModelService()
+  const clientIdService = new ClientIdService()
   registerProjectIpc(projectService)
   registerModelIpc(userModelService)
+  registerClientIdIpc(clientIdService)
   registerFirmwareIpc()
   registerSerialPortSelectedIpc()
 

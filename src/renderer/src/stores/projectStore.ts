@@ -8,6 +8,7 @@ import type {
   ProjectFileNode,
   ProjectItem
 } from '../types/project'
+import { useClientIdStore } from './clientIdStore'
 import { useDeviceStore } from './deviceStore'
 import { runProjectOnDevice } from '../utils/device/runProjectOnDevice'
 import { fileKindFromPath, resolveFileKind } from '../utils/project/fileKind'
@@ -658,7 +659,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       const { ran } = await runProjectOnDevice({
         projectId,
         deviceId: device.id,
-        tempId: useDeviceStore.getState().tempId,
+        clientId: useClientIdStore.getState().clientId,
         fileNodes: project.files ?? [],
         includeMainPyInDownload: false
       })

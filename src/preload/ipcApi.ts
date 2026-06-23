@@ -93,10 +93,16 @@ export interface FirmwareAPI {
   readBundled(fileName: string): Promise<Uint8Array>
 }
 
+export interface ClientIdAPI {
+  get(): Promise<string | null>
+  set(clientId: string): Promise<void>
+}
+
 export interface IpcAPI {
   project: ProjectAPI
   agent: AgentAPI
   model: ModelAPI
   serial: SerialAPI
   firmware: FirmwareAPI
+  clientId: ClientIdAPI
 }

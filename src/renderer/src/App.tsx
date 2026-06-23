@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
 import { OnboardingFlow } from './components/onboarding'
 import WorkspaceLayout from './components/layout/WorkspaceLayout'
+import { bootstrapClientId } from './stores/clientIdStore'
 import { useOnboardingStore } from './stores/onboardingStore'
 import { flushPendingProjectFileWrite, useProjectStore } from './stores/projectStore'
 import { useThemeStore } from './stores/themeStore'
@@ -13,6 +14,10 @@ export default function App(): React.JSX.Element {
   useEffect(() => {
     initializeTheme()
   }, [initializeTheme])
+
+  useEffect(() => {
+    void bootstrapClientId()
+  }, [])
 
   useEffect(() => {
     if (!isInitialized) return

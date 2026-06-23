@@ -14,6 +14,7 @@ import {
 } from '@heroui/react'
 import { FirmwareFlashDialog } from '../device'
 import { DeviceIcon, TrashIcon, ZapIcon } from '../icons/Icons'
+import { useClientIdStore } from '../../stores/clientIdStore'
 import { useDeviceStore } from '../../stores/deviceStore'
 import { useProjectStore } from '../../stores/projectStore'
 import { resolveDeviceImage } from '../../utils/device/deviceImage'
@@ -61,7 +62,7 @@ export default function NewProjectDialog({
   const devices = useDeviceStore((state) => state.devices)
   const unbindDevice = useDeviceStore((state) => state.unbindDevice)
   const clearActiveDeviceReferences = useProjectStore((state) => state.clearActiveDeviceReferences)
-  const tempId = useDeviceStore((state) => state.tempId)
+  const clientId = useClientIdStore((state) => state.clientId)
   const fetchDevices = useDeviceStore((state) => state.fetchDevices)
   const [projectName, setProjectName] = useState('')
   const [deviceMode, setDeviceMode] = useState<DeviceMode>('select')
@@ -119,7 +120,7 @@ export default function NewProjectDialog({
         const device = await bindDevice({
           name: '',
           pairCode: pairingCode,
-          tempId
+          tempId: clientId
         })
         await fetchDevices()
         const success = await onConfirm({

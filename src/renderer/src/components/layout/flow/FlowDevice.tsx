@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Checkbox, Tooltip, toast } from '@heroui/react'
+import { useClientIdStore } from '../../../stores/clientIdStore'
 import { useDeviceStore } from '../../../stores/deviceStore'
 import { useProjectStore } from '../../../stores/projectStore'
 import { useActiveProjectDevices } from '../../../hooks/useActiveProjectDevices'
@@ -21,8 +22,8 @@ import {
 } from '../../icons/Icons'
 
 export default function FlowDevice(): React.JSX.Element {
+  const clientId = useClientIdStore((s) => s.clientId)
   const allDevices = useDeviceStore((s) => s.devices)
-  const tempId = useDeviceStore((s) => s.tempId)
   const fetchDevices = useDeviceStore((s) => s.fetchDevices)
   const unbindDevice = useDeviceStore((s) => s.unbindDevice)
   const renameDevice = useDeviceStore((s) => s.renameDevice)
@@ -199,7 +200,7 @@ export default function FlowDevice(): React.JSX.Element {
       const { ran } = await runProjectOnDevice({
         projectId: activeProjectId,
         deviceId: selectedDevice.id,
-        tempId,
+        clientId,
         fileNodes: activeProject?.files ?? [],
         selectedPath,
         selectedContent: selectedFileContent,

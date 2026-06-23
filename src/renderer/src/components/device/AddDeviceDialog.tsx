@@ -14,6 +14,7 @@ import {
   toast
 } from '@heroui/react'
 import { bindDevice } from '../../api/device'
+import { useClientIdStore } from '../../stores/clientIdStore'
 import { useDeviceStore } from '../../stores/deviceStore'
 import { useProjectStore } from '../../stores/projectStore'
 
@@ -30,7 +31,7 @@ export default function AddDeviceDialog({
   onClose,
   onDeviceAdded
 }: AddDeviceDialogProps): React.JSX.Element | null {
-  const tempId = useDeviceStore((state) => state.tempId)
+  const clientId = useClientIdStore((state) => state.clientId)
   const fetchDevices = useDeviceStore((state) => state.fetchDevices)
   const setProjectActiveDevice = useProjectStore((state) => state.setProjectActiveDevice)
 
@@ -58,7 +59,7 @@ export default function AddDeviceDialog({
       const device = await bindDevice({
         name: '',
         pairCode: safePairCode,
-        tempId
+        tempId: clientId
       })
 
       await fetchDevices()

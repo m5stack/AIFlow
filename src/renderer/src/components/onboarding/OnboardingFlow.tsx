@@ -10,6 +10,7 @@ import {
   toast
 } from '@heroui/react'
 import { bindDevice } from '../../api/device'
+import { useClientIdStore } from '../../stores/clientIdStore'
 import { useDeviceStore } from '../../stores/deviceStore'
 import { useOnboardingStore, type OnboardingStep } from '../../stores/onboardingStore'
 import { useProjectStore } from '../../stores/projectStore'
@@ -32,7 +33,7 @@ export default function OnboardingFlow(): React.JSX.Element {
 
   const createProject = useProjectStore((s) => s.createProject)
   const devices = useDeviceStore((s) => s.devices)
-  const tempId = useDeviceStore((s) => s.tempId)
+  const clientId = useClientIdStore((s) => s.clientId)
   const fetchDevices = useDeviceStore((s) => s.fetchDevices)
 
   const [displayName, setDisplayName] = useState('')
@@ -151,7 +152,7 @@ export default function OnboardingFlow(): React.JSX.Element {
       const device = await bindDevice({
         name: '',
         pairCode,
-        tempId
+        tempId: clientId
       })
       await fetchDevices()
       setResolvedDeviceId(device.id)

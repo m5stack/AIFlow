@@ -5,7 +5,7 @@ import { buildDeviceFiles, buildMainPyFile, getMainPyContent } from '../project/
 export interface RunProjectOnDeviceArgs {
   projectId: string
   deviceId: string
-  tempId: string
+  clientId: string
   fileNodes: ProjectFileNode[]
   /** Path of the file currently open in the editor, used to prefer in-memory content. */
   selectedPath?: string
@@ -33,7 +33,7 @@ export const runProjectOnDevice = async (
   const {
     projectId,
     deviceId,
-    tempId,
+    clientId,
     fileNodes,
     selectedPath,
     selectedContent = '',
@@ -50,11 +50,11 @@ export const runProjectOnDevice = async (
 
   if (includeMainPyInDownload) {
     if (nonMainFiles.length > 0) {
-      await downloadFiles(nonMainFiles, deviceId, tempId)
+      await downloadFiles(nonMainFiles, deviceId, clientId)
     }
-    await downloadCode([buildMainPyFile(mainPyContent)], deviceId, tempId)
+    await downloadCode([buildMainPyFile(mainPyContent)], deviceId, clientId)
   } else if (nonMainFiles.length > 0) {
-    await downloadFiles(nonMainFiles, deviceId, tempId)
+    await downloadFiles(nonMainFiles, deviceId, clientId)
     await pushCode(deviceId, mainPyContent)
   } else {
     await pushCode(deviceId, mainPyContent)

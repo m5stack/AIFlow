@@ -202,6 +202,14 @@ const ipc: IpcAPI = {
     readBundled(fileName: string): Promise<Uint8Array> {
       return ipcRenderer.invoke('firmware:readBundled', fileName)
     }
+  },
+  clientId: {
+    get(): Promise<string | null> {
+      return ipcRenderer.invoke('clientId:get')
+    },
+    set(clientId: string): Promise<void> {
+      return ipcRenderer.invoke('clientId:set', clientId)
+    }
   }
 }
 
