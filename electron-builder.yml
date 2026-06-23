@@ -1,5 +1,5 @@
 appId: com.electron.app
-productName: AI-Flow
+productName: AIFlow
 directories:
   buildResources: build
 files:
@@ -23,7 +23,7 @@ extraResources:
   - from: resources/firmware
     to: firmware
 win:
-  executableName: AI-Flow
+  executableName: AIFlow
   artifactName: ${productName}-${version}-setup.${ext}
 nsis:
   artifactName: ${productName}-${version}-setup.${ext}

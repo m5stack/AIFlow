@@ -19,12 +19,11 @@ export default function TopBar({ onNewProject }: TopBarProps): React.JSX.Element
   return (
     <header className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-5 px-2">
       <div className="flex min-w-0 flex-col">
-        <div className="flex shrink-0 items-center gap-2.5" aria-label="AI-FLOW">
+        <div className="flex shrink-0 items-center gap-2.5" aria-label="AIFLOW">
           <img src={logo} alt="M5Stack" className="h-8 w-auto object-contain" />
           <span className="h-8 w-0.5 shrink-0 bg-muted mx-1" aria-hidden="true" />
           <div className="flex items-baseline font-black italic">
-            <span className="text-[32px] leading-none">AI</span>
-            <span className="text-[22px] leading-none">-FLOW</span>
+            <span className="text-[32px] leading-none">AIFlow</span>
           </div>
           <span className="rounded-full bg-accent-bg px-2 py-0.5 text-[10px] font-semibold text-accent">
             beta

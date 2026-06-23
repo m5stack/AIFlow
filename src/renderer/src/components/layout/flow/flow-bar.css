@@ -199,6 +199,8 @@
 }
 
 .flow-device-wrap {
+  position: relative;
+  z-index: 5;
   display: flex;
   align-items: stretch;
   gap: 6px;
@@ -207,9 +209,18 @@
   min-width: 0;
 }
 
+.flow-col-device {
+  position: relative;
+  z-index: 5;
+}
+
 .flow-device-cluster {
   gap: 0;
   align-items: center;
+  /* Center in space after left gutter; when tight, content stays at the gutter edge. */
+  justify-content: center;
+  padding-left: 28px;
+  box-sizing: border-box;
 }
 
 .flow-device-side {
@@ -651,6 +662,7 @@
   width: 40px;
   height: 30px;
   transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
 .flow-column-track {
@@ -673,6 +685,7 @@
   top: 50%;
   z-index: 3;
   transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
 .flow-arrow-fork-device {

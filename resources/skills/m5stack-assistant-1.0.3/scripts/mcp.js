@@ -46,7 +46,7 @@ async function mcpSearch(query, options = {}) {
                 sendJsonRpc(1, 'initialize', {
                   protocolVersion: '2024-11-05',
                   capabilities: {},
-                  clientInfo: { name: 'AI-Flow', version: '1.0.0-beta' }
+                  clientInfo: { name: 'AIFlow', version: '1.0.0-beta' }
                 })
               }
             }

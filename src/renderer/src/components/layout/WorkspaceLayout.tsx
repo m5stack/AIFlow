@@ -27,7 +27,6 @@ export default function WorkspaceLayout(): React.JSX.Element {
     cssVariables,
     handlePositions,
     draggingIndex,
-    isDesktop,
     onResizeStart
   } = useColumnResize()
 
@@ -41,11 +40,8 @@ export default function WorkspaceLayout(): React.JSX.Element {
 
       <section
         ref={containerRef}
-        className="relative grid min-h-0 flex-1 gap-x-4 gap-y-1 overflow-visible max-[1059px]:auto-rows-auto max-[1059px]:overflow-visible lg:grid-rows-[minmax(0,1fr)_minmax(0,auto)_minmax(150px,0.48fr)]"
-        style={{
-          ...cssVariables,
-          ...(gridTemplateColumns ? { gridTemplateColumns } : {})
-        }}
+        className="relative grid min-h-0 flex-1 gap-x-4 gap-y-1 overflow-visible grid-rows-[minmax(0,1fr)_minmax(0,auto)_minmax(150px,0.48fr)]"
+        style={{ ...cssVariables, gridTemplateColumns }}
       >
         <ConversationThreadPanel session={session} />
         <CodePanel />
@@ -56,22 +52,18 @@ export default function WorkspaceLayout(): React.JSX.Element {
           <FilePanel />
         </div>
         <TerminalPanel />
-        {isDesktop && (
-          <>
-            <ResizeEdge
-              axis="col"
-              left={handlePositions[0]}
-              isDragging={draggingIndex === 0}
-              onMouseDown={(e) => onResizeStart(0, e)}
-            />
-            <ResizeEdge
-              axis="col"
-              left={handlePositions[1]}
-              isDragging={draggingIndex === 1}
-              onMouseDown={(e) => onResizeStart(1, e)}
-            />
-          </>
-        )}
+        <ResizeEdge
+          axis="col"
+          left={handlePositions[0]}
+          isDragging={draggingIndex === 0}
+          onMouseDown={(e) => onResizeStart(0, e)}
+        />
+        <ResizeEdge
+          axis="col"
+          left={handlePositions[1]}
+          isDragging={draggingIndex === 1}
+          onMouseDown={(e) => onResizeStart(1, e)}
+        />
       </section>
 
       <NewProjectDialog

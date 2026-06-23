@@ -11,7 +11,7 @@ import './flow/flow-bar.css'
 export default function FlowBar(): React.JSX.Element {
   return (
     <nav
-      aria-label="AI-FLOW workflow"
+      aria-label="AIFlow workflow"
       className="flow-bar relative z-10 col-span-full grid min-h-0 grid-cols-subgrid items-center gap-0 overflow-visible"
     >
       <FlowColumn className="flow-col-talk min-w-0 col-start-1">
@@ -37,8 +37,8 @@ export default function FlowBar(): React.JSX.Element {
       <FlowArrow variant="green" bridge className="flow-arrow-fork-device" />
       <FlowArrow variant="amber" bridge className="flow-arrow-fork-data" />
 
-      <FlowColumn className="min-w-0 col-start-3">
-        <div className="flow-column-track-row flow-device-cluster flex w-full items-center justify-center">
+      <FlowColumn className="flow-col-device min-w-0 col-start-3">
+        <div className="flow-column-track-row flow-device-cluster flex w-full items-center">
           <FlowDevice />
         </div>
       </FlowColumn>

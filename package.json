@@ -1,7 +1,7 @@
 {
-  "name": "AI-Flow",
+  "name": "AIFlow",
   "version": "1.0.0-beta",
-  "description": "AI-Flow",
+  "description": "AIFlow",
   "main": "./out/main/index.js",
   "author": "M5Stack",
   "homepage": "https://m5stack.com",

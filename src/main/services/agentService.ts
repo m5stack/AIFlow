@@ -252,7 +252,7 @@ export class AgentService {
             type: 'preset',
             preset: 'claude_code',
             append: [
-              'You are running inside AI-Flow.',
+              'You are running inside AIFlow.',
               'The current working directory is the active project files directory.',
               'When the user asks you to create or modify project files, use the available file editing tools directly.',
               'Do not tell the user to manually edit files unless a tool call fails with an unrecoverable error.',

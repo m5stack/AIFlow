@@ -10,7 +10,6 @@ import {
 const DEFAULT_RATIOS: [number, number, number] = [1.12, 1, 0.98]
 const MIN_WIDTHS: [number, number, number] = [280, 340, 300]
 const GAP = 16
-const DESKTOP_BREAKPOINT = 1060
 
 type ColRatios = [number, number, number]
 type PixelWidths = [number, number, number]
@@ -30,11 +29,10 @@ function pixelWidthsToHandlePositions(widths: PixelWidths): [number, number] {
 
 interface UseColumnResizeResult {
   containerRef: RefObject<HTMLElement | null>
-  gridTemplateColumns: string | undefined
+  gridTemplateColumns: string
   cssVariables: CSSProperties
   handlePositions: [number, number]
   draggingIndex: number | null
-  isDesktop: boolean
   onResizeStart: (dividerIndex: number, e: React.MouseEvent) => void
 }
 
@@ -43,9 +41,6 @@ export function useColumnResize(): UseColumnResizeResult {
   const [colRatios, setColRatios] = useState<ColRatios>(DEFAULT_RATIOS)
   const [handlePositions, setHandlePositions] = useState<[number, number]>([0, 0])
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
-  const [isDesktop, setIsDesktop] = useState(
-    () => typeof window !== 'undefined' && window.innerWidth >= DESKTOP_BREAKPOINT
-  )
 
   const dragRef = useRef<{
     dividerIndex: number
@@ -55,20 +50,12 @@ export function useColumnResize(): UseColumnResizeResult {
 
   const updateHandlePositions = useCallback(() => {
     const container = containerRef.current
-    if (!container || !isDesktop) return
+    if (!container) return
     const available = container.clientWidth - 2 * GAP
     if (available <= 0) return
     const widths = ratiosToPixelWidths(colRatios, available)
     setHandlePositions(pixelWidthsToHandlePositions(widths))
-  }, [colRatios, isDesktop])
-
-  useEffect(() => {
-    const mq = window.matchMedia(`(min-width: ${DESKTOP_BREAKPOINT}px)`)
-    const onChange = (): void => setIsDesktop(mq.matches)
-    onChange()
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [])
+  }, [colRatios])
 
   useEffect(() => {
     updateHandlePositions()
@@ -83,7 +70,7 @@ export function useColumnResize(): UseColumnResizeResult {
     (dividerIndex: number, e: React.MouseEvent) => {
       e.preventDefault()
       const container = containerRef.current
-      if (!container || !isDesktop) return
+      if (!container) return
 
       const available = container.clientWidth - 2 * GAP
       const startWidths = ratiosToPixelWidths(colRatios, available)
@@ -128,14 +115,15 @@ export function useColumnResize(): UseColumnResizeResult {
       document.addEventListener('mousemove', onMouseMove)
       document.addEventListener('mouseup', onMouseUp)
     },
-    [colRatios, isDesktop]
+    [colRatios]
   )
 
   const totalRatio = colRatios[0] + colRatios[1] + colRatios[2]
 
-  const gridTemplateColumns = isDesktop
-    ? `minmax(${MIN_WIDTHS[0]}px, ${colRatios[0]}fr) minmax(${MIN_WIDTHS[1]}px, ${colRatios[1]}fr) minmax(${MIN_WIDTHS[2]}px, ${colRatios[2]}fr)`
-    : undefined
+  const gridTemplateColumns =
+    `minmax(${MIN_WIDTHS[0]}px, ${colRatios[0]}fr) ` +
+    `minmax(${MIN_WIDTHS[1]}px, ${colRatios[1]}fr) ` +
+    `minmax(${MIN_WIDTHS[2]}px, ${colRatios[2]}fr)`
 
   const cssVariables: CSSProperties = {
     ['--col-1-ratio' as string]: String(colRatios[0]),
@@ -150,7 +138,6 @@ export function useColumnResize(): UseColumnResizeResult {
     cssVariables,
     handlePositions,
     draggingIndex,
-    isDesktop,
     onResizeStart
   }
 }

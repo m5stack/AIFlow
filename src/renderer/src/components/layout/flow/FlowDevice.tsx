@@ -401,7 +401,7 @@ export default function FlowDevice(): React.JSX.Element {
             variant={autoRunAfterChatEnabled ? 'primary' : undefined}
             className={`flow-device-run flow-device-run-auto${autoRunAfterChatEnabled ? ' is-active' : ''}`}
             aria-pressed={autoRunAfterChatEnabled}
-            aria-label="Auto-run after chat"
+            aria-label="Auto-Run after chat"
             onPress={() => setAutoRunAfterChatEnabled(!autoRunAfterChatEnabled)}
           >
             <span className="flow-device-auto-run-visual" aria-hidden>
@@ -415,7 +415,7 @@ export default function FlowDevice(): React.JSX.Element {
                 </Checkbox.Control>
               </Checkbox>
             </span>
-            Auto-run
+            Auto-Run
           </Button>
         </div>
       </div>

@@ -16,7 +16,7 @@ export default function WelcomeStep({ onGetStarted }: WelcomeStepProps): React.J
   return (
     <div className="flex flex-1 flex-col items-center justify-center text-center px-2">
       <img src={logo} alt="M5Stack" className="h-24 w-auto object-contain mb-4" />
-      <h1 className="text-[28px] font-semibold text-[var(--text-h)]">Welcome to AI-Flow.</h1>
+      <h1 className="text-[28px] font-semibold text-[var(--text-h)]">Welcome to AIFlow.</h1>
 
       <div className="my-16 w-full">
         <StepIndicator step={0} variant="preview" />

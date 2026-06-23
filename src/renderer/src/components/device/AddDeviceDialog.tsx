@@ -98,7 +98,7 @@ export default function AddDeviceDialog({
 
             <ModalBody className="flex flex-col gap-4 p-2">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[12px] font-medium text-default-500">Pair Code</label>
+                <label className="text-[12px] font-medium text-default-500">Access Code</label>
                 <p className="text-[11px]" style={{ color: 'var(--text)', opacity: 0.6 }}>
                   Enter the 6-digit pairing code shown on the device screen.
                 </p>

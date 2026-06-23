@@ -35,8 +35,11 @@ export default function DeviceStep({
       <div>
         <h2 className="text-[18px] font-bold text-[var(--text-h)]">Connect M5Stack Device</h2>
         <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
-          Flash the firmware for AIFlow into your M5Stack device, and connect the device with this
-          computer.
+          Flash the firmware for AIFlow into your M5Stack device,
+        </p>
+        <p className="text-[11px] leading-relaxed text-muted">
+          {' '}
+          and connect the device with this computer.
         </p>
       </div>
 
@@ -59,7 +62,7 @@ export default function DeviceStep({
             Flash
           </Button>
           <p className="text-[11px] text-muted  leading-relaxed">
-            If your M5Stack device is already displaying the 6-digit pair code, you can skip
+            If your M5Stack device is already displaying the 6-digit access code, you can skip
             flashing and directly input it underneath.
           </p>
         </div>
@@ -135,7 +138,7 @@ export default function DeviceStep({
         </div>
       ) : (
         <div className="flex flex-col gap-1.5">
-          <label className="text-[12px] font-medium text-default-500">Input the Pair Code</label>
+          <label className="text-[12px] font-medium text-default-500">Input the Access Code</label>
           <TextField
             value={pairCode}
             onChange={(v) => onPairCodeChange(v.replace(/\D/g, '').slice(0, 6))}
@@ -157,11 +160,11 @@ export default function DeviceStep({
             />
           </TextField>
           <p className="text-[11px] text-muted">
-            The 6-digit pair code displayed on the device screen.
+            The 6-digit access code displayed on the device screen.
           </p>
           {pairCode.length > 0 && !pairCodeValid && (
             <p className="text-[11px]" style={{ color: '#f85149' }}>
-              Pair code must be exactly 6 digits.
+              Access code must be exactly 6 digits.
             </p>
           )}
         </div>

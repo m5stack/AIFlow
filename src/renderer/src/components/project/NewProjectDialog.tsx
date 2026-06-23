@@ -89,9 +89,7 @@ export default function NewProjectDialog({
 
   const pairingCodeValid = pairingCode.length === 6 && /^\d{6}$/.test(pairingCode)
   const canConfirm =
-    projectName.trim().length > 0 &&
-    !isPairing &&
-    (deviceMode !== 'pair' || pairingCodeValid)
+    projectName.trim().length > 0 && !isPairing && (deviceMode !== 'pair' || pairingCodeValid)
 
   const handleRemoveDevice = async (deviceId: string, deviceName: string): Promise<void> => {
     if (removingId || isPairing) return
@@ -308,10 +306,10 @@ export default function NewProjectDialog({
                     <div className="flex flex-col gap-3">
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[12px] font-medium text-default-500">
-                          Pair Code
+                          Access Code
                         </label>
                         <p className="text-[11px]" style={{ color: 'var(--text)', opacity: 0.6 }}>
-                          Enter the 6-digit pairing code shown on the device screen.
+                          Enter the 6-digit access code shown on the device screen.
                         </p>
                         <TextField
                           value={pairingCode}

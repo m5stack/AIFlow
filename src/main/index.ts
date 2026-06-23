@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, Menu } from 'electron'
+import { app, shell, BrowserWindow, Menu, screen } from 'electron'
 import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { registerAgentIpc } from './ipc/agentIpc'
@@ -15,6 +15,10 @@ app.commandLine.appendSwitch('enable-features', 'WebSerial')
 /** Matches workspace lg breakpoint (3-column layout + flow bar). */
 const WINDOW_MIN_WIDTH = 1060
 const WINDOW_MIN_HEIGHT = 640
+
+/** Design baseline; zoom keeps the CSS viewport aligned to this canvas. */
+const BASE_DESIGN_WIDTH = 1440
+const BASE_DESIGN_HEIGHT = 900
 
 async function createWindow(
   projectService: ProjectService,
@@ -35,9 +39,36 @@ async function createWindow(
     }
   })
 
+  const applyZoom = (): void => {
+    if (mainWindow.isDestroyed()) return
+    const [contentWidth, contentHeight] = mainWindow.getContentSize()
+    if (contentWidth <= 0 || contentHeight <= 0) return
+
+    const isBelowBaseline =
+      contentWidth < BASE_DESIGN_WIDTH || contentHeight < BASE_DESIGN_HEIGHT
+
+    // Below baseline: scale down to fit. At or above baseline: no zoom (layout fills naturally).
+    const zoom = isBelowBaseline
+      ? Math.min(contentWidth / BASE_DESIGN_WIDTH, contentHeight / BASE_DESIGN_HEIGHT)
+      : 1
+    mainWindow.webContents.setZoomFactor(Math.min(Math.max(zoom, 0.5), 4))
+  }
+
   mainWindow.on('ready-to-show', () => {
+    const { width, height } = screen.getPrimaryDisplay().workAreaSize
+    if (width < BASE_DESIGN_WIDTH || height < BASE_DESIGN_HEIGHT) {
+      mainWindow.maximize()
+    }
     mainWindow.show()
+    applyZoom()
   })
+
+  mainWindow.webContents.on('did-finish-load', applyZoom)
+  mainWindow.on('resize', applyZoom)
+  mainWindow.on('maximize', applyZoom)
+  mainWindow.on('unmaximize', applyZoom)
+  mainWindow.on('enter-full-screen', applyZoom)
+  mainWindow.on('leave-full-screen', applyZoom)
   if (process.env['OPEN_DEVTOOLS'] === '1') {
     mainWindow.webContents.openDevTools()
   }

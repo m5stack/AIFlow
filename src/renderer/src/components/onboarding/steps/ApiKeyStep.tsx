@@ -34,15 +34,16 @@ export default function ApiKeyStep({
       <div>
         <h2 className="text-[18px] font-bold text-[var(--text-h)]">Input API Key</h2>
         <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
-          Supports Anthropic and compatible APIs (e.g. DeepSeek). OpenAI and compatible APIs are
-          not supported.
+          Supports Anthropic and compatible APIs (e.g. DeepSeek).
+        </p>
+        <p className="text-[11px] leading-relaxed text-muted">
+          OpenAI and compatible APIs are not supported.
         </p>
       </div>
 
       {hasExistingModels && (
         <p className="text-[11px] text-accent bg-accent-bg rounded-lg px-3 py-2">
-          You already have a model configured. You can update the fields below or proceed with
-          Next.
+          You already have a model configured. You can update the fields below or proceed with Next.
         </p>
       )}
 
