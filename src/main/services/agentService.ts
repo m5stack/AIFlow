@@ -13,6 +13,7 @@ import type {
   ChatMessage
 } from '../../shared/types'
 import { formatPinMapsForPrompt, normalizeDeviceTypeForPinMap } from '../../shared/deviceInfo'
+import { buildAgentSdkEnv } from '../agentEnv'
 import { getClaudeExecutablePath } from '../claudeExecutablePath'
 import { DEVICE_RESOURCE_RULES_CRITICAL, type ProjectService } from './projectService'
 import type { UserModelService } from './userModelService'
@@ -234,7 +235,7 @@ export class AgentService {
         projectId: params.projectId,
         convId: params.convId,
         model,
-        hasBaseUrl: !!modelCredentials?.baseUrl
+        baseUrl: modelCredentials?.baseUrl ?? 'default'
       })
       currentQuery = query({
         prompt: turnPrompt,
@@ -247,7 +248,7 @@ export class AgentService {
           permissionMode: 'acceptEdits',
           disallowedTools: ['Bash'],
           skills: 'all',
-          settingSources: ['project', 'user'],
+          settingSources: ['project'],
           systemPrompt: {
             type: 'preset',
             preset: 'claude_code',
@@ -268,20 +269,7 @@ export class AgentService {
           enableFileCheckpointing: true,
           includePartialMessages: true,
           thinking: { type: 'adaptive' },
-          env: {
-            ...process.env,
-            ...(modelCredentials?.baseUrl ? { ANTHROPIC_BASE_URL: modelCredentials.baseUrl } : {}),
-            ...(modelCredentials?.apiKey && modelCredentials.baseUrl
-              ? { ANTHROPIC_AUTH_TOKEN: modelCredentials.apiKey }
-              : {}),
-            ...(modelCredentials?.apiKey && !modelCredentials.baseUrl
-              ? { ANTHROPIC_API_KEY: modelCredentials.apiKey }
-              : {}),
-            ...(modelCredentials?.disableNonessentialTraffic
-              ? { CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1' }
-              : {}),
-            CLAUDE_AGENT_SDK_CLIENT_APP: 'AI-Flow/beta'
-          },
+          env: buildAgentSdkEnv(modelCredentials),
           canUseTool: async (
             toolName: string,
             input: Record<string, unknown>,
