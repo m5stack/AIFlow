@@ -22,7 +22,6 @@ import type {
   UserModelConfig,
   UpdateUserModelConfigPayload
 } from '../shared/types'
-import type { BundledFirmwareInfo } from '../shared/bundledFirmware'
 
 export interface SerialAPI {
   onPortList(callback: (ports: SerialPortInfo[]) => void): () => void
@@ -91,8 +90,7 @@ export interface ModelAPI {
 
 export interface FirmwareAPI {
   generateNvsFromCsv(csvText: string, size: number | string): Promise<Uint8Array>
-  getBundledInfo(): Promise<BundledFirmwareInfo>
-  readBundled(): Promise<Uint8Array>
+  readBundled(fileName: string): Promise<Uint8Array>
 }
 
 export interface IpcAPI {

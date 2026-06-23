@@ -2,7 +2,7 @@ Place bundled Claude Agent SDK skills in this directory.
 
 Example:
 
-resources/skills/uiflow2-coder-1.0.6/SKILL.md
+resources/skills/uiflow2-coder-1.0.9/SKILL.md
 
 At runtime, the bundled skills directory is symlinked into the active project:
 

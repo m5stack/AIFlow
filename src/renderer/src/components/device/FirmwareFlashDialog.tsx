@@ -28,8 +28,9 @@ import {
   TextField
 } from '@heroui/react'
 import {
-  BUNDLED_FIRMWARE_FILENAME,
-  type BundledFirmwareInfo
+  BUNDLED_FIRMWARES,
+  DEFAULT_BUNDLED_FIRMWARE_ID,
+  getBundledFirmwareEntry
 } from '../../../../shared/bundledFirmware'
 import {
   generateUiflow2NvsBin,
@@ -38,9 +39,6 @@ import {
   UIFLOW2_NVS_DEFAULTS
 } from '../../utils/device/uiflow2Nvs'
 
-function bundledFirmwareDisplayName(info: BundledFirmwareInfo | null): string {
-  return info?.fileName ?? BUNDLED_FIRMWARE_FILENAME
-}
 
 interface SerialPortInfo {
   portId: string
@@ -60,11 +58,6 @@ export default function FirmwareFlashDialog({
   isOpen,
   onClose
 }: FirmwareFlashDialogProps): React.JSX.Element | null {
-  const [isLoadingFirmwares, setIsLoadingFirmwares] = useState(false)
-  const [firmwareLoadError, setFirmwareLoadError] = useState('')
-  const [server, setServer] = useState(UIFLOW2_DEFAULT_SERVER)
-  const [wifiSsid, setWifiSsid] = useState('')
-  const [wifiPassword, setWifiPassword] = useState('')
   const [isFlashing, setIsFlashing] = useState(false)
   const [isSelectingPort, setIsSelectingPort] = useState(false)
   const [flashProgress, setFlashProgress] = useState(0)
@@ -73,7 +66,10 @@ export default function FirmwareFlashDialog({
   const [selectedPortId, setSelectedPortId] = useState('')
   const [selectedPort, setSelectedPort] = useState<any>(null)
   const [serialListenerReady, setSerialListenerReady] = useState(false)
-  const [bundledInfo, setBundledInfo] = useState<BundledFirmwareInfo | null>(null)
+  const [selectedFirmwareId, setSelectedFirmwareId] = useState(DEFAULT_BUNDLED_FIRMWARE_ID)
+  const [server, setServer] = useState(UIFLOW2_DEFAULT_SERVER)
+  const [wifiSsid, setWifiSsid] = useState('')
+  const [wifiPassword, setWifiPassword] = useState('')
   const preferredPortIdRef = useRef('')
   const logContainerRef = useRef<HTMLDivElement>(null)
 
@@ -83,42 +79,16 @@ export default function FirmwareFlashDialog({
     }
   }, [flashLogs])
 
-  const bundledFirmwareReady = bundledInfo?.exists === true
-  const bundledFirmwareName = bundledFirmwareDisplayName(bundledInfo)
+  const selectedFirmware = getBundledFirmwareEntry(selectedFirmwareId) ?? BUNDLED_FIRMWARES[0]
 
   useEffect(() => {
     if (!isOpen) return
 
     setFlashLogs([])
     setFlashProgress(0)
-    setFirmwareLoadError('')
     setSelectedPort(null)
+    setSelectedFirmwareId(DEFAULT_BUNDLED_FIRMWARE_ID)
     setServer(UIFLOW2_DEFAULT_SERVER)
-
-    let disposed = false
-
-    const loadBundledFirmware = async (): Promise<void> => {
-      setIsLoadingFirmwares(true)
-      setBundledInfo(null)
-      try {
-        const info = await window.ipc.firmware.getBundledInfo()
-        if (disposed) return
-        setBundledInfo(info)
-      } catch (error) {
-        if (disposed) return
-        setFirmwareLoadError(
-          error instanceof Error ? error.message : 'Failed to load local firmware'
-        )
-      } finally {
-        if (!disposed) setIsLoadingFirmwares(false)
-      }
-    }
-
-    void loadBundledFirmware()
-
-    return () => {
-      disposed = true
-    }
   }, [isOpen])
 
   // Register serial port list IPC listener only while this dialog is open.
@@ -198,13 +168,6 @@ export default function FirmwareFlashDialog({
   }
 
   const handleFlashFirmware = async (): Promise<void> => {
-    if (!bundledFirmwareReady) {
-      appendFlashLog(
-        `Bundled firmware missing: place ${BUNDLED_FIRMWARE_FILENAME} in resources/firmware/.`
-      )
-      return
-    }
-
     if (!selectedPort) {
       appendFlashLog('Please select a serial port first.')
       return
@@ -217,8 +180,8 @@ export default function FirmwareFlashDialog({
     let transport: Transport | null = null
     let resetDone = false
     try {
-      const binary = await window.ipc.firmware.readBundled()
-      appendFlashLog(`Bundled firmware loaded (${binary.byteLength} bytes).`)
+      const binary = await window.ipc.firmware.readBundled(selectedFirmware.fileName)
+      appendFlashLog(`Bundled firmware loaded: ${selectedFirmware.label}.`)
 
       const ssid = wifiSsid.trim()
       if (ssid && !wifiPassword) {
@@ -359,24 +322,30 @@ export default function FirmwareFlashDialog({
                 {/* Bundled firmware */}
                 <div>
                   <label className="text-[12px] text-default-500">Firmware</label>
-                  <div
-                    className="mt-1 rounded-lg border border-[var(--border)] bg-default-50 px-3 py-2 text-[12px] text-default-700"
-                    aria-readonly
+                  <Select
+                    value={selectedFirmwareId}
+                    onChange={(key) => {
+                      const id = key ? String(key) : ''
+                      if (id) setSelectedFirmwareId(id)
+                    }}
+                    isDisabled={isFlashing}
+                    className="mt-1"
+                    variant="secondary"
                   >
-                    {isLoadingFirmwares ? (
-                      <span className="text-default-400">Loading...</span>
-                    ) : (
-                      bundledFirmwareName
-                    )}
-                  </div>
-                  {firmwareLoadError && (
-                    <div className="mt-1 text-[11px] text-danger">{firmwareLoadError}</div>
-                  )}
-                  {bundledInfo && !bundledInfo.exists && (
-                    <div className="mt-1 text-[11px] text-danger">
-                      Missing {BUNDLED_FIRMWARE_FILENAME} in resources/firmware/
-                    </div>
-                  )}
+                    <SelectTrigger className="border border-[var(--border)] rounded-lg">
+                      <SelectValue />
+                      <SelectIndicator />
+                    </SelectTrigger>
+                    <SelectPopover>
+                      <ListBox>
+                        {BUNDLED_FIRMWARES.map((item) => (
+                          <ListBox.Item key={item.id} id={item.id} textValue={item.label}>
+                            {item.label}
+                          </ListBox.Item>
+                        ))}
+                      </ListBox>
+                    </SelectPopover>
+                  </Select>
                 </div>
 
                 <TextField className="flex flex-col gap-1">
@@ -462,9 +431,7 @@ export default function FirmwareFlashDialog({
                 </Button>
                 <Button
                   variant="primary"
-                  isDisabled={
-                    !bundledFirmwareReady || isFlashing || isSelectingPort || !selectedPort
-                  }
+                  isDisabled={isFlashing || isSelectingPort || !selectedPort}
                   onPress={() => {
                     handleFlashFirmware()
                   }}

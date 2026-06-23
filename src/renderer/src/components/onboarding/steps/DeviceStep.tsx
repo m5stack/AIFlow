@@ -35,13 +35,13 @@ export default function DeviceStep({
       <div>
         <h2 className="text-[18px] font-bold text-[var(--text-h)]">Connect M5Stack Device</h2>
         <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
-          Flash the firmware for AI-Flow into your M5Stack device, and connect the device with this
+          Flash the firmware for AIFlow into your M5Stack device, and connect the device with this
           computer.
         </p>
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="text-[12px] font-medium text-default-500">Flash AI-Flow Firmware</label>
+        <label className="text-[12px] font-medium text-default-500">Flash AIFlow Firmware</label>
         <div
           className="flex flex-col items-center justify-center gap-2 rounded-lg px-3 py-2.5"
           style={{

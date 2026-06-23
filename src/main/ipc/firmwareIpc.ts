@@ -1,13 +1,9 @@
 import { createRequire } from 'module'
 import { existsSync } from 'fs'
-import { readFile, stat } from 'fs/promises'
+import { readFile } from 'fs/promises'
 import { join } from 'path'
 import { app, ipcMain } from 'electron'
-import {
-  BUNDLED_FIRMWARE_DIR,
-  BUNDLED_FIRMWARE_FILENAME,
-  type BundledFirmwareInfo
-} from '../../shared/bundledFirmware'
+import { BUNDLED_FIRMWARE_DIR, BUNDLED_FIRMWARES } from '../../shared/bundledFirmware'
 
 const require = createRequire(__filename)
 
@@ -17,8 +13,8 @@ function bundledFirmwareRoot(): string {
     : join(process.cwd(), 'resources', BUNDLED_FIRMWARE_DIR)
 }
 
-function resolveBundledFirmwarePath(): string {
-  return join(bundledFirmwareRoot(), BUNDLED_FIRMWARE_FILENAME)
+function resolveBundledFirmwarePath(fileName: string): string {
+  return join(bundledFirmwareRoot(), fileName)
 }
 
 function resolveNvsPartitionGenPath(): string {
@@ -51,25 +47,16 @@ function getNvsPartitionGen(): NvsPartitionGenModule {
   return nvsPartitionGenModule
 }
 
-async function getBundledFirmwareInfo(): Promise<BundledFirmwareInfo> {
-  const fileName = BUNDLED_FIRMWARE_FILENAME
-  const path = resolveBundledFirmwarePath()
-  try {
-    const fileStat = await stat(path)
-    if (!fileStat.isFile()) {
-      return { exists: false, fileName }
-    }
-    return { exists: true, fileName, byteLength: fileStat.size }
-  } catch {
-    return { exists: false, fileName }
+async function readBundledFirmware(fileName: string): Promise<Uint8Array> {
+  const entry = BUNDLED_FIRMWARES.find((item) => item.fileName === fileName)
+  if (!entry) {
+    throw new Error(`Unknown bundled firmware: ${fileName}`)
   }
-}
 
-async function readBundledFirmware(): Promise<Uint8Array> {
-  const path = resolveBundledFirmwarePath()
+  const path = resolveBundledFirmwarePath(fileName)
   if (!existsSync(path)) {
     throw new Error(
-      `Bundled firmware not found at ${path}. Place ${BUNDLED_FIRMWARE_FILENAME} in resources/firmware/.`
+      `Bundled firmware not found at ${path}. Place ${fileName} in resources/firmware/.`
     )
   }
   const buffer = await readFile(path)
@@ -78,7 +65,6 @@ async function readBundledFirmware(): Promise<Uint8Array> {
 
 export function registerFirmwareIpc(): void {
   ipcMain.removeHandler('firmware:generateNvsFromCsv')
-  ipcMain.removeHandler('firmware:getBundledInfo')
   ipcMain.removeHandler('firmware:readBundled')
 
   ipcMain.handle(
@@ -90,7 +76,7 @@ export function registerFirmwareIpc(): void {
     }
   )
 
-  ipcMain.handle('firmware:getBundledInfo', () => getBundledFirmwareInfo())
-
-  ipcMain.handle('firmware:readBundled', () => readBundledFirmware())
+  ipcMain.handle('firmware:readBundled', (_event, fileName: string) =>
+    readBundledFirmware(fileName)
+  )
 }

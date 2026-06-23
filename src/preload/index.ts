@@ -24,7 +24,6 @@ import type {
   UserModelConfig,
   UpdateUserModelConfigPayload
 } from '../shared/types'
-import type { BundledFirmwareInfo } from '../shared/bundledFirmware'
 import type { IpcAPI } from './ipcApi'
 
 const ipc: IpcAPI = {
@@ -200,11 +199,8 @@ const ipc: IpcAPI = {
     generateNvsFromCsv(csvText: string, size: number | string): Promise<Uint8Array> {
       return ipcRenderer.invoke('firmware:generateNvsFromCsv', csvText, size)
     },
-    getBundledInfo(): Promise<BundledFirmwareInfo> {
-      return ipcRenderer.invoke('firmware:getBundledInfo')
-    },
-    readBundled(): Promise<Uint8Array> {
-      return ipcRenderer.invoke('firmware:readBundled')
+    readBundled(fileName: string): Promise<Uint8Array> {
+      return ipcRenderer.invoke('firmware:readBundled', fileName)
     }
   }
 }
