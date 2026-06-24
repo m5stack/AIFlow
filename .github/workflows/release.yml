@@ -24,35 +24,17 @@ jobs:
         include:
           - name: macOS arm64
             os: macos-latest
-            platform: darwin
-            arch: arm64
-            builder-args: --mac --arm64
+            build-script: build:mac
             artifact-name: macos-arm64
             artifact-paths: |
               dist/*.dmg
-              dist/*.zip
-              dist/*.blockmap
-              dist/latest-mac.yml
           - name: Windows x64
             os: windows-latest
-            platform: win32
-            arch: x64
-            builder-args: --win --x64
+            build-script: build:win
             artifact-name: windows-x64
             artifact-paths: |
               dist/*.exe
-              dist/*.blockmap
-              dist/latest.yml
-          - name: Linux x64
-            os: ubuntu-latest
-            platform: linux
-            arch: x64
-            builder-args: --linux AppImage deb --x64
-            artifact-name: linux-x64
-            artifact-paths: |
-              dist/*.AppImage
-              dist/*.deb
-              dist/latest-linux.yml
+              dist/*.zip
 
     steps:
       - name: Checkout
@@ -67,14 +49,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build app
-        run: npm run build
-
-      - name: Prepare bundled Claude binary
-        run: node scripts/prepare-claude-binary.js ${{ matrix.platform }} ${{ matrix.arch }}
-
-      - name: Package app
-        run: npx electron-builder ${{ matrix.builder-args }}
+      - name: Build and package app
+        run: npm run ${{ matrix.build-script }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

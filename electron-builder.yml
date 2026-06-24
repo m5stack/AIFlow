@@ -24,6 +24,9 @@ extraResources:
     to: firmware
 win:
   executableName: AIFlow
+  target:
+    - nsis
+    - zip
   artifactName: ${productName}-${version}-setup.${ext}
 nsis:
   artifactName: ${productName}-${version}-setup.${ext}
