@@ -1,4 +1,4 @@
-# AI-Flow
+# AIFlow
 
 A desktop editor for M5Stack vibe coding projects, built with Electron, React, and TypeScript. Chat uses the Claude Agent SDK; the bottom terminal connects to devices over WebSocket/Web Serial.
 

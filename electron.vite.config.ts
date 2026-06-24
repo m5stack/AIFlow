@@ -35,12 +35,12 @@ export default defineConfig({
       port: 5172,
       proxy: {
         '/api': {
-          target: 'https://ai-flow.m5stack.com/api/v1',
+          target: 'https://aiflow.m5stack.com/api/v1',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, '')
         },
         '/ws/realtime': {
-          target: 'wss://ai-flow.m5stack.com',
+          target: 'wss://aiflow.m5stack.com',
           ws: true,
           changeOrigin: true
         }

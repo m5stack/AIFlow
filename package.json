@@ -1,6 +1,6 @@
 {
   "name": "AIFlow",
-  "version": "1.0.0-beta",
+  "version": "1.0.1-beta",
   "description": "AIFlow",
   "main": "./out/main/index.js",
   "author": "M5Stack",
@@ -18,7 +18,6 @@
     "build:unpack": "npm run build && node scripts/prepare-claude-binary.js darwin arm64 && electron-builder --dir",
     "build:mac": "npm run build && node scripts/prepare-claude-binary.js darwin arm64 && electron-builder --mac --arm64",
     "build:win": "npm run build && node scripts/prepare-claude-binary.js win32 x64 && electron-builder --win --x64",
-    "build:linux": "npm run build && node scripts/prepare-claude-binary.js linux x64 && electron-builder --linux --x64",
     "icons:mac": "node scripts/round-mac-icon.mjs",
     "icons:win": "node scripts/generate-win-icon.mjs"
   },
