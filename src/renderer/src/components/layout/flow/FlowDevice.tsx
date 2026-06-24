@@ -315,7 +315,20 @@ export default function FlowDevice(): React.JSX.Element {
                 ) : null}
               </div>
               <div className="flow-device-text">
-                <span className="flow-device-name">
+                <span className={`flow-device-name${isEditingName ? ' is-editing' : ''}`}>
+                  <span className="flow-device-name-label">{deviceName}</span>
+                  {displayDevice?.invalid && <span className="flow-device-invalid">Invalid</span>}
+                  {canRename ? (
+                    <button
+                      type="button"
+                      className="flow-device-name-edit"
+                      aria-label="Rename device"
+                      title="Rename device"
+                      onClick={startRename}
+                    >
+                      <EditIcon size={11} />
+                    </button>
+                  ) : null}
                   {isEditingName ? (
                     <input
                       ref={renameInputRef}
@@ -334,25 +347,7 @@ export default function FlowDevice(): React.JSX.Element {
                       onBlur={() => void submitRename()}
                       className="app-input flow-device-name-input"
                     />
-                  ) : (
-                    <>
-                      <span className="flow-device-name-label">{deviceName}</span>
-                      {displayDevice?.invalid && (
-                        <span className="flow-device-invalid">Invalid</span>
-                      )}
-                      {canRename ? (
-                        <button
-                          type="button"
-                          className="flow-device-name-edit"
-                          aria-label="Rename device"
-                          title="Rename device"
-                          onClick={startRename}
-                        >
-                          <EditIcon size={10} />
-                        </button>
-                      ) : null}
-                    </>
-                  )}
+                  ) : null}
                 </span>
                 {deviceType ? <span className="flow-device-type">{deviceType}</span> : null}
               </div>
