@@ -13,6 +13,7 @@ import type {
   AgentTurnCompleteEvent,
   ChatMessage,
   ChatMessageRunStatus,
+  ChatTokenUsage,
   CreateUserModelConfigPayload,
   CreateProjectPayload,
   LegacyProjectPayload,
@@ -99,6 +100,20 @@ const ipc: IpcAPI = {
         convId,
         userMessageId,
         durationMs
+      )
+    },
+    setTurnTokenUsage(
+      projectId: string,
+      convId: string,
+      userMessageId: string,
+      tokenUsage: ChatTokenUsage
+    ): Promise<ProjectConversation> {
+      return ipcRenderer.invoke(
+        'project:setTurnTokenUsage',
+        projectId,
+        convId,
+        userMessageId,
+        tokenUsage
       )
     },
     setTurnRunStatus(

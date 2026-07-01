@@ -22,6 +22,7 @@ export function useAgentSession() {
     renameConversation,
     appendConversationMessages,
     setTurnDuration,
+    applyTurnTokenUsage,
     autoRunGeneratedCode,
     handleAgentMessage,
     handleAgentFilesChanged,
@@ -136,6 +137,9 @@ export function useAgentSession() {
     const offTurnComplete = window.ipc.agent.onTurnComplete((event) => {
       const userMessageId = thinkingMetaRef.current[event.convId]?.turnId
       finishThinkingTurn(event.projectId, event.convId)
+      if (userMessageId && event.tokenUsage) {
+        applyTurnTokenUsage(event.projectId, event.convId, userMessageId, event.tokenUsage)
+      }
       setThinkingByConvId((prev) => ({ ...prev, [event.convId]: false }))
       setInterruptingByConvId((prev) => ({ ...prev, [event.convId]: false }))
       setActivityByConvId((prev) => {
@@ -187,6 +191,7 @@ export function useAgentSession() {
     }
   }, [
     autoRunGeneratedCode,
+    applyTurnTokenUsage,
     finishThinkingTurn,
     handleAgentFilesChanged,
     handleAgentMessage,

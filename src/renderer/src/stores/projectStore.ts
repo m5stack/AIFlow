@@ -3,12 +3,14 @@ import { toast } from '@heroui/react'
 import type {
   ChatMessage,
   ChatMessageRunStatus,
+  ChatTokenUsage,
   LegacyProjectPayload,
   ProjectConversation,
   ProjectFileNode,
   ProjectItem
 } from '../types/project'
 import { useClientIdStore } from './clientIdStore'
+// import { useDeviceFilePreviewStore } from './deviceFilePreviewStore'
 import { useDeviceStore } from './deviceStore'
 import { runProjectOnDevice } from '../utils/device/runProjectOnDevice'
 import { fileKindFromPath, resolveFileKind } from '../utils/project/fileKind'
@@ -158,7 +160,7 @@ const conversationReplaced = (
 const applyTurnPatch = (
   conversation: ProjectConversation,
   userMessageId: string,
-  patch: { durationMs?: number; runStatus?: ChatMessageRunStatus }
+  patch: { durationMs?: number; tokenUsage?: ChatTokenUsage; runStatus?: ChatMessageRunStatus }
 ): ProjectConversation => {
   const userIndex = conversation.messages.findIndex((message) => message.id === userMessageId)
   if (userIndex === -1) return conversation
@@ -243,6 +245,12 @@ interface ProjectStoreState {
     userMessageId: string,
     durationMs: number
   ) => Promise<void>
+  setTurnTokenUsage: (
+    projectId: string,
+    convId: string,
+    userMessageId: string,
+    tokenUsage: ChatTokenUsage
+  ) => Promise<void>
   setTurnRunStatus: (
     projectId: string,
     convId: string,
@@ -256,6 +264,12 @@ interface ProjectStoreState {
   deleteProject: (id: string) => Promise<void>
   setProjectActiveDevice: (projectId: string, deviceId: string) => Promise<void>
   clearActiveDeviceReferences: (deviceId: string) => Promise<void>
+  applyTurnTokenUsage: (
+    projectId: string,
+    convId: string,
+    userMessageId: string,
+    tokenUsage: ChatTokenUsage
+  ) => void
   handleAgentMessage: (projectId: string, convId: string, message: ChatMessage) => void
   handleAgentFilesChanged: (projectId: string, paths: string[]) => Promise<void>
   reloadActiveCodeFile: (projectId: string) => Promise<void>
@@ -389,6 +403,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   },
 
   selectProjectFile: (projectId, file) => {
+    // useDeviceFilePreviewStore.getState().clearPreview()
     if (projectId !== get().activeProjectId) {
       const { projects, selectedConvByProject } = get()
       set({
@@ -613,6 +628,42 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     }
   },
 
+  setTurnTokenUsage: async (projectId, convId, userMessageId, tokenUsage) => {
+    set((state) => {
+      const project = state.projects.find((item) => item.id === projectId)
+      const conversation = project?.conversations.find((item) => item.id === convId)
+      if (!conversation) return state
+      const nextConversation = applyTurnPatch(conversation, userMessageId, { tokenUsage })
+      if (nextConversation === conversation) return state
+      return { projects: conversationReplaced(state.projects, projectId, nextConversation) }
+    })
+
+    try {
+      const conversation = await window.ipc.project.setTurnTokenUsage(
+        projectId,
+        convId,
+        userMessageId,
+        tokenUsage
+      )
+      set((state) => ({ projects: conversationReplaced(state.projects, projectId, conversation) }))
+    } catch (error) {
+      toast.danger(
+        `Failed to save token usage: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
+    }
+  },
+
+  applyTurnTokenUsage: (projectId, convId, userMessageId, tokenUsage) => {
+    set((state) => {
+      const project = state.projects.find((item) => item.id === projectId)
+      const conversation = project?.conversations.find((item) => item.id === convId)
+      if (!conversation) return state
+      const nextConversation = applyTurnPatch(conversation, userMessageId, { tokenUsage })
+      if (nextConversation === conversation) return state
+      return { projects: conversationReplaced(state.projects, projectId, nextConversation) }
+    })
+  },
+
   setTurnRunStatus: async (projectId, convId, userMessageId, runStatus) => {
     set((state) => {
       const project = state.projects.find((item) => item.id === projectId)
@@ -801,10 +852,21 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       if (!conversation) return state
 
       const existingIndex = conversation.messages.findIndex((item) => item.id === message.id)
+      const existing = existingIndex >= 0 ? conversation.messages[existingIndex] : undefined
+      const mergedMessage = existing
+        ? {
+            ...message,
+            durationMs: message.durationMs ?? existing.durationMs,
+            tokenUsage: message.tokenUsage ?? existing.tokenUsage,
+            runStatus: message.runStatus ?? existing.runStatus
+          }
+        : message
       const messages =
         existingIndex >= 0
-          ? conversation.messages.map((item, index) => (index === existingIndex ? message : item))
-          : [...conversation.messages, message]
+          ? conversation.messages.map((item, index) =>
+              index === existingIndex ? mergedMessage : item
+            )
+          : [...conversation.messages, mergedMessage]
 
       const nextConversation = {
         ...conversation,

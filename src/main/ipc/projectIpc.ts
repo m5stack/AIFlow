@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import type {
   ChatMessage,
   ChatMessageRunStatus,
+  ChatTokenUsage,
   CreateProjectPayload,
   LegacyProjectPayload
 } from '../../shared/types'
@@ -26,6 +27,7 @@ export function registerProjectIpc(projectService: ProjectService): void {
     'project:renameConversation',
     'project:appendConversationMessages',
     'project:setTurnDuration',
+    'project:setTurnTokenUsage',
     'project:setTurnRunStatus',
     'project:setActiveDevice'
   ].forEach((channel) => ipcMain.removeHandler(channel))
@@ -90,6 +92,16 @@ export function registerProjectIpc(projectService: ProjectService): void {
     'project:setTurnDuration',
     (_event, projectId: string, convId: string, userMessageId: string, durationMs: number) =>
       projectService.setTurnDuration(projectId, convId, userMessageId, durationMs)
+  )
+  ipcMain.handle(
+    'project:setTurnTokenUsage',
+    (
+      _event,
+      projectId: string,
+      convId: string,
+      userMessageId: string,
+      tokenUsage: ChatTokenUsage
+    ) => projectService.setTurnTokenUsage(projectId, convId, userMessageId, tokenUsage)
   )
   ipcMain.handle(
     'project:setTurnRunStatus',

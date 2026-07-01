@@ -6,6 +6,7 @@ import { realpathSync } from 'fs'
 import type {
   ChatMessage,
   ChatMessageRunStatus,
+  ChatTokenUsage,
   CreateProjectPayload,
   LegacyProjectPayload,
   ProjectConversation,
@@ -431,8 +432,17 @@ export class ProjectService {
     const next = [...existing]
     for (const message of incoming) {
       const index = next.findIndex((item) => item.id === message.id)
-      if (index >= 0) next[index] = message
-      else next.push(message)
+      if (index >= 0) {
+        const prev = next[index]
+        next[index] = {
+          ...message,
+          durationMs: message.durationMs ?? prev.durationMs,
+          tokenUsage: message.tokenUsage ?? prev.tokenUsage,
+          runStatus: message.runStatus ?? prev.runStatus
+        }
+      } else {
+        next.push(message)
+      }
     }
     return next
   }
@@ -461,6 +471,55 @@ export class ProjectService {
     await this.writeConversation(projectId, conversation)
     await this.touchProject(projectId)
     return conversation
+  }
+
+  async setTurnTokenUsage(
+    projectId: string,
+    convId: string,
+    userMessageId: string,
+    tokenUsage: ChatTokenUsage
+  ): Promise<ProjectConversation> {
+    const conversation = await this.readConversation(projectId, convId)
+    const userIndex = conversation.messages.findIndex((message) => message.id === userMessageId)
+    if (userIndex === -1) return conversation
+
+    let lastAssistantIndex = -1
+    for (let i = userIndex + 1; i < conversation.messages.length; i++) {
+      if (conversation.messages[i].role === 'user') break
+      if (conversation.messages[i].role === 'assistant') lastAssistantIndex = i
+    }
+    if (lastAssistantIndex === -1) return conversation
+
+    const messages = [...conversation.messages]
+    messages[lastAssistantIndex] = { ...messages[lastAssistantIndex], tokenUsage }
+    conversation.messages = messages
+    conversation.updatedAt = nowIso()
+    await this.writeConversation(projectId, conversation)
+    await this.touchProject(projectId)
+    return conversation
+  }
+
+  async setTurnTokenUsageForLastTurn(
+    projectId: string,
+    convId: string,
+    tokenUsage: ChatTokenUsage
+  ): Promise<ProjectConversation> {
+    const conversation = await this.readConversation(projectId, convId)
+    let lastUserIndex = -1
+    for (let i = conversation.messages.length - 1; i >= 0; i--) {
+      if (conversation.messages[i].role === 'user') {
+        lastUserIndex = i
+        break
+      }
+    }
+    if (lastUserIndex === -1) return conversation
+
+    return this.setTurnTokenUsage(
+      projectId,
+      convId,
+      conversation.messages[lastUserIndex].id,
+      tokenUsage
+    )
   }
 
   async setTurnRunStatus(

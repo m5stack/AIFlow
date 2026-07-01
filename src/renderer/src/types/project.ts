@@ -10,6 +10,7 @@ export type {
   AgentTurnCompleteEvent,
   ChatMessage,
   ChatMessageRunStatus,
+  ChatTokenUsage,
   CreateProjectPayload,
   LegacyProjectPayload,
   ProjectConversation,

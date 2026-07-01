@@ -1,6 +1,7 @@
 import React from 'react'
 import { RunStatusBadge } from './ConversationMessage'
 import { formatTurnDuration } from '../../utils/conversation/formatTurnDuration'
+import { formatTokenUsage } from '../../utils/conversation/formatTokenUsage'
 import type { ChatMessage } from '../../types/chat'
 
 interface ConversationTurnMetaProps {
@@ -24,6 +25,10 @@ export default function ConversationTurnMeta({ message }: ConversationTurnMetaPr
     items.push(
       <span key="duration">Response time: {formatTurnDuration(message.durationMs)}</span>
     )
+  }
+
+  if (message.tokenUsage) {
+    items.push(<span key="tokens">{formatTokenUsage(message.tokenUsage)}</span>)
   }
 
   if (message.runStatus) {

@@ -10,7 +10,8 @@ import type {
   AgentStartTurnParams,
   AgentTurnCompleteEvent,
   AgentActiveDevice,
-  ChatMessage
+  ChatMessage,
+  ChatTokenUsage
 } from '../../shared/types'
 import { formatPinMapsForPrompt, normalizeDeviceTypeForPinMap } from '../../shared/deviceInfo'
 import { buildAgentSdkEnv } from '../agentEnv'
@@ -145,6 +146,41 @@ const extractToolPath = (toolName: string, input: Record<string, unknown>): stri
 
 const FILE_EDIT_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
 
+const extractTokenUsage = (message: Record<string, unknown>): ChatTokenUsage | undefined => {
+  const usage = message.usage as Record<string, unknown> | undefined
+  let inputTokens = typeof usage?.input_tokens === 'number' ? usage.input_tokens : 0
+  let outputTokens = typeof usage?.output_tokens === 'number' ? usage.output_tokens : 0
+
+  if (inputTokens === 0 && outputTokens === 0) {
+    const modelUsage = message.modelUsage as Record<string, Record<string, unknown>> | undefined
+    if (modelUsage && typeof modelUsage === 'object') {
+      for (const entry of Object.values(modelUsage)) {
+        if (typeof entry?.inputTokens === 'number') inputTokens += entry.inputTokens
+        if (typeof entry?.outputTokens === 'number') outputTokens += entry.outputTokens
+      }
+    }
+  }
+
+  if (inputTokens === 0 && outputTokens === 0) return undefined
+
+  const tokenUsage: ChatTokenUsage = { inputTokens, outputTokens }
+
+  if (
+    typeof usage?.cache_creation_input_tokens === 'number' &&
+    usage.cache_creation_input_tokens > 0
+  ) {
+    tokenUsage.cacheCreationInputTokens = usage.cache_creation_input_tokens
+  }
+  if (typeof usage?.cache_read_input_tokens === 'number' && usage.cache_read_input_tokens > 0) {
+    tokenUsage.cacheReadInputTokens = usage.cache_read_input_tokens
+  }
+  if (typeof message.total_cost_usd === 'number') {
+    tokenUsage.totalCostUsd = message.total_cost_usd
+  }
+
+  return tokenUsage
+}
+
 /** Collect file paths touched by file-editing tool_use blocks in an assistant message. */
 const changedPathsFromContent = (content: unknown): string[] => {
   if (!Array.isArray(content)) return []
@@ -166,6 +202,7 @@ export class AgentService {
   private readonly activeQueries = new Map<string, QueryHandle>()
   private readonly pendingPermissions = new Map<string, PermissionWaiter>()
   private readonly streamState = new Map<string, StreamState>()
+  private readonly finalizePromises = new Map<string, Promise<void>>()
 
   constructor(
     private readonly projectService: ProjectService,
@@ -189,6 +226,7 @@ export class AgentService {
 
   async interrupt(convId: string): Promise<void> {
     this.clearStreamState(convId)
+    this.finalizePromises.delete(convId)
     const query = this.activeQueries.get(convId)
     if (!query) return
     try {
@@ -217,6 +255,7 @@ export class AgentService {
   private async runTurn(params: AgentStartTurnParams): Promise<void> {
     this.activeQueries.get(params.convId)?.close()
     this.clearStreamState(params.convId)
+    this.finalizePromises.delete(params.convId)
     let currentQuery: (QueryHandle & AsyncIterable<unknown>) | undefined
 
     try {
@@ -553,7 +592,13 @@ export class AgentService {
     }
 
     if (event.type === 'message_stop') {
-      void this.finalizeStreamMessage(params, sessionId)
+      const promise = this.finalizeStreamMessage(params, sessionId)
+      this.finalizePromises.set(params.convId, promise)
+      void promise.finally(() => {
+        if (this.finalizePromises.get(params.convId) === promise) {
+          this.finalizePromises.delete(params.convId)
+        }
+      })
       return
     }
 
@@ -673,13 +718,25 @@ export class AgentService {
     }
 
     if (message.type === 'result') {
+      await this.finalizePromises.get(params.convId)
+
+      const tokenUsage = extractTokenUsage(message)
+      if (tokenUsage) {
+        await this.projectService.setTurnTokenUsageForLastTurn(
+          params.projectId,
+          params.convId,
+          tokenUsage
+        )
+      }
+
       this.sendEvent('turnComplete', {
         projectId: params.projectId,
         convId: params.convId,
         sessionId: typeof message.session_id === 'string' ? message.session_id : undefined,
         result: typeof message.result === 'string' ? message.result : undefined,
         totalCostUsd:
-          typeof message.total_cost_usd === 'number' ? message.total_cost_usd : undefined
+          typeof message.total_cost_usd === 'number' ? message.total_cost_usd : undefined,
+        tokenUsage
       })
     }
   }

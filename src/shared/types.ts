@@ -5,6 +5,14 @@ export interface ChatCodeBlock {
 
 export type ChatMessageRunStatus = 'running' | 'done' | 'failed'
 
+export interface ChatTokenUsage {
+  inputTokens: number
+  outputTokens: number
+  cacheCreationInputTokens?: number
+  cacheReadInputTokens?: number
+  totalCostUsd?: number
+}
+
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
@@ -16,6 +24,7 @@ export interface ChatMessage {
   isStreaming?: boolean
   codeBlocks?: ChatCodeBlock[]
   durationMs?: number
+  tokenUsage?: ChatTokenUsage
   runStatus?: ChatMessageRunStatus
 }
 
@@ -182,6 +191,7 @@ export interface AgentTurnCompleteEvent {
   sessionId?: string
   result?: string
   totalCostUsd?: number
+  tokenUsage?: ChatTokenUsage
 }
 
 export interface AgentErrorEvent {

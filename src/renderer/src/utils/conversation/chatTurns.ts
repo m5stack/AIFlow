@@ -48,6 +48,7 @@ export function mergeAssistantParts(parts: ChatMessage[]): ChatMessage {
     isStreaming: parts.some((part) => part.isStreaming),
     codeBlocks: parts.flatMap((part) => part.codeBlocks ?? []),
     durationMs: [...parts].reverse().find((part) => part.durationMs != null)?.durationMs,
+    tokenUsage: [...parts].reverse().find((part) => part.tokenUsage != null)?.tokenUsage,
     runStatus: [...parts].reverse().find((part) => part.runStatus != null)?.runStatus
   }
 }

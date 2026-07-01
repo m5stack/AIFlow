@@ -11,6 +11,7 @@ import type {
   AgentTurnCompleteEvent,
   ChatMessage,
   ChatMessageRunStatus,
+  ChatTokenUsage,
   CreateProjectPayload,
   CreateUserModelConfigPayload,
   LegacyProjectPayload,
@@ -60,6 +61,12 @@ export interface ProjectAPI {
     convId: string,
     userMessageId: string,
     durationMs: number
+  ): Promise<ProjectConversation>
+  setTurnTokenUsage(
+    projectId: string,
+    convId: string,
+    userMessageId: string,
+    tokenUsage: ChatTokenUsage
   ): Promise<ProjectConversation>
   setTurnRunStatus(
     projectId: string,
