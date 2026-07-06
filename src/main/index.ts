@@ -7,8 +7,10 @@ import { registerModelIpc } from './ipc/modelIpc'
 import { registerFirmwareIpc } from './ipc/firmwareIpc'
 import { registerProjectIpc } from './ipc/projectIpc'
 import { registerSerialIpc, registerSerialPortSelectedIpc } from './ipc/serialIpc'
+import { registerSkillIpc } from './ipc/skillIpc'
 import { ClientIdService } from './services/clientIdService'
 import { ProjectService } from './services/projectService'
+import { SkillService } from './services/skillService'
 import { UserModelService } from './services/userModelService'
 
 // Enable Web Serial API
@@ -24,7 +26,8 @@ const BASE_DESIGN_HEIGHT = 900
 
 async function createWindow(
   projectService: ProjectService,
-  userModelService: UserModelService
+  userModelService: UserModelService,
+  skillService: SkillService
 ): Promise<void> {
   const mainWindow = new BrowserWindow({
     width: 1440,
@@ -80,6 +83,7 @@ async function createWindow(
   })
 
   registerAgentIpc(mainWindow, projectService, userModelService)
+  registerSkillIpc(mainWindow, skillService, projectService)
 
   if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
@@ -112,7 +116,8 @@ app.whenReady().then(() => {
   if (process.platform === 'darwin') {
     app.dock?.setIcon(icon)
   }
-  const projectService = new ProjectService()
+  const skillService = new SkillService()
+  const projectService = new ProjectService(undefined, skillService)
   const userModelService = new UserModelService()
   const clientIdService = new ClientIdService()
   registerProjectIpc(projectService)
@@ -121,10 +126,12 @@ app.whenReady().then(() => {
   registerFirmwareIpc()
   registerSerialPortSelectedIpc()
 
-  createWindow(projectService, userModelService)
+  createWindow(projectService, userModelService, skillService)
 
   app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow(projectService, userModelService)
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow(projectService, userModelService, skillService)
+    }
   })
 })
 

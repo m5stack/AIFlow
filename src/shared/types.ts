@@ -226,3 +226,10 @@ export interface SerialPortInfo {
   vendorId?: string
   productId?: string
 }
+
+export interface SkillItem {
+  slug: string
+  name: string
+  description?: string
+  builtin: boolean
+}

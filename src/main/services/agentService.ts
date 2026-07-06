@@ -270,6 +270,7 @@ export class AgentService {
       const activeDevicePrompt = buildActiveDevicePrompt(params.activeDevice)
       const turnContext = await this.projectService.getProjectTurnContext(params.projectId)
       const turnPrompt = buildTurnPrompt(params.prompt, turnContext.turnPromptPrefix)
+      await this.projectService.reconcileProjectSkills(params.projectId)
       console.log('[agent] start turn', {
         projectId: params.projectId,
         convId: params.convId,
@@ -281,7 +282,7 @@ export class AgentService {
         options: {
           pathToClaudeCodeExecutable: getClaudeExecutablePath(),
           cwd: this.projectService.getProjectFilesRoot(params.projectId),
-          additionalDirectories: [this.projectService.getBundledSkillsRoot()],
+          additionalDirectories: this.projectService.getSkillAdditionalDirectories(),
           resume: conversation.claudeSessionId,
           model,
           permissionMode: 'acceptEdits',

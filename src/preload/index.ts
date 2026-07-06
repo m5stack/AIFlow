@@ -24,6 +24,7 @@ import type {
   ProjectFileNode,
   ProjectItem,
   SerialPortInfo,
+  SkillItem,
   UserModelConfig,
   UpdateUserModelConfigPayload
 } from '../shared/types'
@@ -229,6 +230,20 @@ const ipc: IpcAPI = {
     },
     set(clientId: string): Promise<void> {
       return ipcRenderer.invoke('clientId:set', clientId)
+    }
+  },
+  skill: {
+    list(): Promise<SkillItem[]> {
+      return ipcRenderer.invoke('skill:list')
+    },
+    add(): Promise<SkillItem[]> {
+      return ipcRenderer.invoke('skill:add')
+    },
+    delete(slug: string): Promise<SkillItem[]> {
+      return ipcRenderer.invoke('skill:delete', slug)
+    },
+    open(slug: string): Promise<void> {
+      return ipcRenderer.invoke('skill:open', slug)
     }
   }
 }

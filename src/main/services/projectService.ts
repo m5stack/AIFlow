@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import { randomUUID } from 'crypto'
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'path'
-import { lstat, mkdir, readFile, readdir, rename, rm, stat, symlink, writeFile } from 'fs/promises'
+import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'fs/promises'
 import { realpathSync } from 'fs'
 import type {
   ChatMessage,
@@ -16,6 +16,7 @@ import type {
   ProjectManifest
 } from '../../shared/types'
 import { languageByExtension, mimeByExtension } from '../../shared/fileExtensions'
+import { SkillService } from './skillService'
 
 const PROJECTS_DIR_NAME = 'projects'
 const INDEX_FILE_NAME = 'index.json'
@@ -25,7 +26,6 @@ const CHATS_DIR_NAME = 'chats'
 const ASSETS_DIR_NAME = 'assets'
 const DEFAULT_LANGUAGE = 'python'
 const DEFAULT_FILE_NAME = 'main.py'
-const BUNDLED_SKILLS_DIR_NAME = 'skills'
 const FILE_TREE_MAX_ENTRIES = 200
 const FILE_TREE_MAX_CHARS = 8000
 
@@ -114,7 +114,10 @@ export class ProjectService {
   private readonly projectsDir: string
   private readonly indexPath: string
 
-  constructor(projectsDir = join(app.getPath('userData'), PROJECTS_DIR_NAME)) {
+  constructor(
+    projectsDir = join(app.getPath('userData'), PROJECTS_DIR_NAME),
+    private readonly skillService: SkillService = new SkillService()
+  ) {
     this.projectsDir = projectsDir
     this.indexPath = join(projectsDir, INDEX_FILE_NAME)
   }
@@ -578,25 +581,59 @@ export class ProjectService {
   }
 
   getBundledSkillsRoot(): string {
-    const root = resolve(this.bundledSkillsRoot())
-    // Canonicalize symlinks (e.g. macOS /var -> /private/var, Gatekeeper App
-    // Translocation). Claude Code resolves the doc's realpath when it follows the
-    // .claude/skills symlink, then checks it against `additionalDirectories`. If we
-    // hand it a non-canonical path the check fails and doc reads are denied in the
-    // packaged app.
-    try {
-      return realpathSync(root)
-    } catch {
-      return root
+    return this.skillService.getBundledSkillsRoot()
+  }
+
+  getUserSkillsRoot(): string {
+    return this.skillService.getUserSkillsRoot()
+  }
+
+  getSkillAdditionalDirectories(): string[] {
+    return this.skillService.getSkillAdditionalDirectories()
+  }
+
+  async reconcileProjectSkills(projectId: string): Promise<void> {
+    await this.skillService.reconcileProjectSkills(this.filesRoot(projectId))
+  }
+
+  async getProjectIds(): Promise<string[]> {
+    await this.ensureReady()
+    const index = await this.readIndex()
+    const ids = new Set(index.order)
+    const entries = await readdir(this.projectsDir, { withFileTypes: true })
+    for (const entry of entries) {
+      if (entry.isDirectory()) ids.add(entry.name)
     }
+    return Array.from(ids)
+  }
+
+  async clearAllClaudeSessions(): Promise<void> {
+    const projectIds = await this.getProjectIds()
+    await Promise.all(
+      projectIds.map(async (projectId) => {
+        const conversations = await this.readConversations(projectId)
+        await Promise.all(
+          conversations.map(async (conversation) => {
+            if (!conversation.claudeSessionId) return
+            delete conversation.claudeSessionId
+            conversation.updatedAt = nowIso()
+            await this.writeConversation(projectId, conversation)
+          })
+        )
+      })
+    )
+  }
+
+  async applySkillsChange(): Promise<void> {
+    const projectIds = await this.getProjectIds()
+    await Promise.all(projectIds.map((projectId) => this.reconcileProjectSkills(projectId)))
+    await this.clearAllClaudeSessions()
   }
 
   isBundledSkillsPath(filePath: string): boolean {
     if (!filePath || filePath.includes('\0')) return false
     const bundledRoot = this.getBundledSkillsRoot()
     const resolved = isAbsolute(filePath) ? resolve(filePath) : resolve(bundledRoot, filePath)
-    // Compare against the canonical path so symlinked locations (macOS App
-    // Translocation, /var -> /private/var) still match the canonical bundledRoot.
     let absPath = resolved
     try {
       absPath = realpathSync(resolved)
@@ -608,7 +645,7 @@ export class ProjectService {
 
   validateAgentReadPath(projectId: string, filePath: string): boolean {
     if (this.validateProjectFilePath(projectId, filePath)) return true
-    return this.isBundledSkillsPath(filePath)
+    return this.skillService.isSkillPath(filePath)
   }
 
   validateProjectFilePath(projectId: string, filePath: string): boolean {
@@ -709,33 +746,7 @@ export class ProjectService {
   }
 
   private async linkBundledSkills(projectId: string): Promise<void> {
-    const sourceDir = this.getBundledSkillsRoot()
-    const linkType = process.platform === 'win32' ? 'junction' : 'dir'
-    const claudeDir = join(this.filesRoot(projectId), '.claude')
-    const skillsDir = join(claudeDir, 'skills')
-
-    try {
-      await stat(sourceDir)
-    } catch {
-      // The app can run without bundled skills during local development.
-      return
-    }
-
-    try {
-      await lstat(skillsDir)
-      return
-    } catch {
-      // skillsDir does not exist yet
-    }
-
-    await mkdir(claudeDir, { recursive: true })
-    await symlink(sourceDir, skillsDir, linkType)
-  }
-
-  private bundledSkillsRoot(): string {
-    return app.isPackaged
-      ? join(process.resourcesPath, BUNDLED_SKILLS_DIR_NAME)
-      : join(process.cwd(), 'resources', BUNDLED_SKILLS_DIR_NAME)
+    await this.reconcileProjectSkills(projectId)
   }
 
   private normalizeConversation(

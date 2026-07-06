@@ -22,6 +22,7 @@ import type {
   ProjectFileNode,
   ProjectItem,
   SerialPortInfo,
+  SkillItem,
   UserModelConfig,
   UpdateUserModelConfigPayload
 } from '../shared/types'
@@ -108,6 +109,13 @@ export interface ClientIdAPI {
   set(clientId: string): Promise<void>
 }
 
+export interface SkillAPI {
+  list(): Promise<SkillItem[]>
+  add(): Promise<SkillItem[]>
+  delete(slug: string): Promise<SkillItem[]>
+  open(slug: string): Promise<void>
+}
+
 export interface IpcAPI {
   project: ProjectAPI
   agent: AgentAPI
@@ -115,4 +123,5 @@ export interface IpcAPI {
   serial: SerialAPI
   firmware: FirmwareAPI
   clientId: ClientIdAPI
+  skill: SkillAPI
 }
