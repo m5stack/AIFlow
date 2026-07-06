@@ -1,13 +1,16 @@
 import React from 'react'
+import { useFlowStatusStore } from '../../../stores/flowStatusStore'
 
 export default function FlowAiNode(): React.JSX.Element {
+  const ai = useFlowStatusStore((s) => s.ai)
+
   return (
     <div className="flow-ai-anchor">
       <div className="flow-ai-dots" aria-hidden="true">
         <span className="flow-ai-dot flow-ai-dot-sm" />
         <span className="flow-ai-dot flow-ai-dot-lg" />
       </div>
-      <div className="flow-ai-cloud">
+      <div className={`flow-ai-cloud${ai ? ' is-flow-glow flow-glow-ai' : ''}`}>
         <svg className="flow-ai-cloud-svg" viewBox="0 0 102 58" aria-hidden="true">
           <g fill="currentColor">
             <rect x="22" y="20" width="58" height="22" />

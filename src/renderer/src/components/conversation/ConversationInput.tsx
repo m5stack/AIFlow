@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { SendIcon, StopIcon } from '../icons/Icons'
+import { useFlowStatusStore } from '../../stores/flowStatusStore'
 import type { ChatModelOption } from '../../types/model'
 
 interface ConversationInputProps {
@@ -31,8 +32,20 @@ export default function ConversationInput({
 }: ConversationInputProps): React.JSX.Element {
   const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const setTalk = useFlowStatusStore((s) => s.setTalk)
   const selectedModelConfig = models.find((model) => model.id === selectedModel)
   const hasSelectedModel = Boolean(selectedModel && selectedModelConfig)
+
+  const syncTalkGlow = useCallback(
+    (nextValue: string) => {
+      setTalk(nextValue.trim() !== '')
+    },
+    [setTalk]
+  )
+
+  useEffect(() => {
+    return () => setTalk(false)
+  }, [setTalk])
 
   const handleSend = (): void => {
     const trimmed = value.trim()
@@ -43,6 +56,7 @@ export default function ConversationInput({
     }
     onSend(trimmed)
     setValue('')
+    setTalk(false)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -126,7 +140,12 @@ export default function ConversationInput({
           ref={textareaRef}
           className="min-h-0 w-full flex-1 resize-none bg-transparent px-3 py-2.5 text-[13px] leading-relaxed text-ink outline-none placeholder:text-muted"
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => {
+            const nextValue = e.target.value
+            setValue(nextValue)
+            syncTalkGlow(nextValue)
+          }}
+          onBlur={() => syncTalkGlow(value)}
           onKeyDown={handleKeyDown}
           disabled={disabled}
           placeholder={placeholder}

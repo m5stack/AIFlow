@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { toast } from '@heroui/react'
 import { createUserChatMessage, flushPendingProjectFileWrite, useProjectStore } from '../stores/projectStore'
+import { useFlowStatusStore } from '../stores/flowStatusStore'
 import { useDeviceStore } from '../stores/deviceStore'
 import { useOnboardingStore } from '../stores/onboardingStore'
 import { groupMessagesIntoTurns, mergeAssistantParts } from '../utils/conversation/chatTurns'
@@ -63,6 +64,11 @@ export function useAgentSession() {
   )
   const activityLabel = selectedConvId ? activityByConvId[selectedConvId] : undefined
   const autoScrollActive = isThinking || hasStreamingAssistant
+  const setAi = useFlowStatusStore((s) => s.setAi)
+
+  useEffect(() => {
+    setAi(isThinking || hasStreamingAssistant)
+  }, [isThinking, hasStreamingAssistant, setAi])
 
   const modelOptions: ChatModelOption[] = userModels.map((model) => ({
     ...model,

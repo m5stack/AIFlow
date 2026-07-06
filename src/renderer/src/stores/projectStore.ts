@@ -11,6 +11,7 @@ import type {
 } from '../types/project'
 import { useClientIdStore } from './clientIdStore'
 import { useDeviceFilePreviewStore } from './deviceFilePreviewStore'
+import { useFlowStatusStore } from './flowStatusStore'
 import { useDeviceStore } from './deviceStore'
 import { runProjectOnDevice } from '../utils/device/runProjectOnDevice'
 import { fileKindFromPath, resolveFileKind } from '../utils/project/fileKind'
@@ -476,6 +477,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   updateProjectFileContent: (content) => {
     const { activeProjectId, codeFilePath, projects } = get()
     if (!activeProjectId || !codeFilePath) return
+    useFlowStatusStore.getState().pulseCode()
     set({
       selectedFileContent: content,
       projects: projects.map((project) =>
@@ -705,6 +707,9 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     // No valid active device: skip silently (no badge).
     if (!device?.id) return
 
+    const setDevice = useFlowStatusStore.getState().setDevice
+    setDevice('running')
+
     try {
       // Read from disk (no selectedPath) so the agent's freshly written files are used.
       const { ran } = await runProjectOnDevice({
@@ -716,9 +721,14 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       })
 
       // No main.py content: treat as "no code generated", show no badge.
-      if (!ran) return
+      if (!ran) {
+        setDevice('idle')
+        return
+      }
+      setDevice('success')
       await get().setTurnRunStatus(projectId, convId, userMessageId, 'done')
     } catch (error) {
+      setDevice('failed')
       toast.danger(`Run failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
       void get().setTurnRunStatus(projectId, convId, userMessageId, 'failed')
     }
@@ -878,6 +888,9 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   },
 
   handleAgentFilesChanged: async (projectId, paths) => {
+    if (paths.length > 0) {
+      useFlowStatusStore.getState().pulseCode()
+    }
     await flushPendingProjectFileWrite()
     await get().refreshProject(projectId)
     const { activeProjectId, codeFilePath, selectedFile } = get()

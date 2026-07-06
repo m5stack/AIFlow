@@ -3,6 +3,7 @@ import { Button, Checkbox, Tooltip, toast } from '@heroui/react'
 import { useClientIdStore } from '../../../stores/clientIdStore'
 import { useDeviceStore } from '../../../stores/deviceStore'
 import { useProjectStore } from '../../../stores/projectStore'
+import { useFlowStatusStore } from '../../../stores/flowStatusStore'
 import { useActiveProjectDevices } from '../../../hooks/useActiveProjectDevices'
 import { resolveDeviceImage, imgUnknown } from '../../../utils/device/deviceImage'
 import { runProjectOnDevice } from '../../../utils/device/runProjectOnDevice'
@@ -34,6 +35,8 @@ export default function FlowDevice(): React.JSX.Element {
   const selectedFileContent = useProjectStore((s) => s.selectedFileContent)
   const autoRunAfterChatEnabled = useProjectStore((s) => s.autoRunAfterChatEnabled)
   const setAutoRunAfterChatEnabled = useProjectStore((s) => s.setAutoRunAfterChatEnabled)
+  const deviceGlow = useFlowStatusStore((s) => s.device)
+  const setDeviceGlow = useFlowStatusStore((s) => s.setDevice)
 
   const { activeProjectId, activeProject, selectedDevice } = useActiveProjectDevices()
 
@@ -196,6 +199,7 @@ export default function FlowDevice(): React.JSX.Element {
 
     const selectedPath = codeFilePath ?? undefined
     setIsRunning(true)
+    setDeviceGlow('running')
     try {
       const { ran } = await runProjectOnDevice({
         projectId: activeProjectId,
@@ -207,13 +211,16 @@ export default function FlowDevice(): React.JSX.Element {
         includeMainPyInDownload
       })
       if (!ran) {
+        setDeviceGlow('idle')
         toast.danger('No code to run. Add main.py content first.')
         return
       }
+      setDeviceGlow('success')
       toast.success(
         includeMainPyInDownload ? 'Files downloaded and code sent.' : 'Code sent to device.'
       )
     } catch (error) {
+      setDeviceGlow('failed')
       toast.danger(`Run failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsRunning(false)
@@ -223,7 +230,17 @@ export default function FlowDevice(): React.JSX.Element {
   return (
     <>
       <div className="flow-device-wrap">
-        <div className="flow-device">
+        <div
+          className={`flow-device${
+            deviceGlow === 'running'
+              ? ' flow-device-running'
+              : deviceGlow === 'success'
+                ? ' flow-device-success'
+                : deviceGlow === 'failed'
+                  ? ' flow-device-failed'
+                  : ''
+          }`}
+        >
           <div className="flow-device-left">
             <span className="flow-device-title">Device</span>
             <div className="flow-device-left-actions">

@@ -768,3 +768,111 @@ html[data-theme='dark'],
 .flow-device-run-send {
   font-size: 12px;
 }
+
+/* ── Breathing glow (呼吸灯) ── */
+
+@keyframes flow-breathe-halo {
+  0%,
+  100% {
+    opacity: 0.12;
+    transform: scale(0.88);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes flow-breathe-shadow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 4px color-mix(in srgb, var(--flow-glow-color) 30%, transparent),
+      0 0 10px color-mix(in srgb, var(--flow-glow-color) 15%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 10px color-mix(in srgb, var(--flow-glow-color) 90%, transparent),
+      0 0 22px color-mix(in srgb, var(--flow-glow-color) 55%, transparent),
+      0 0 38px color-mix(in srgb, var(--flow-glow-color) 25%, transparent);
+  }
+}
+
+.flow-glow-talk,
+.flow-glow-ai,
+.flow-glow-code,
+.flow-device-running {
+  --flow-glow-color: var(--flow-blue);
+}
+
+.flow-glow-talk {
+  --flow-glow-color: var(--flow-pink);
+}
+
+.flow-glow-ai {
+  --flow-glow-color: var(--flow-blue);
+}
+
+.flow-glow-code {
+  --flow-glow-color: var(--flow-green);
+}
+
+.flow-device-running {
+  --flow-glow-color: var(--flow-blue);
+}
+
+/* SVG nodes: blurred halo pseudo-element */
+.flow-talk-bubble.is-flow-glow::after,
+.flow-ai-cloud.is-flow-glow::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 50%;
+  background: var(--flow-glow-color);
+  filter: blur(14px);
+  animation: flow-breathe-halo 2.2s ease-in-out infinite;
+}
+
+.flow-talk-bubble.is-flow-glow::after {
+  inset: 4px 8px 18px;
+}
+
+.flow-ai-cloud.is-flow-glow::after {
+  inset: -4px -6px;
+}
+
+/* Rect nodes: animated box-shadow */
+.flow-code-pill.is-flow-glow,
+.flow-device.flow-device-running {
+  animation: flow-breathe-shadow 2.2s ease-in-out infinite;
+}
+
+.flow-device-success {
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--flow-green) 55%, transparent),
+    0 0 20px color-mix(in srgb, var(--flow-green) 30%, transparent);
+}
+
+.flow-device-failed {
+  box-shadow:
+    0 0 8px color-mix(in srgb, #e5484d 55%, transparent),
+    0 0 20px color-mix(in srgb, #e5484d 30%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-talk-bubble.is-flow-glow::after,
+  .flow-ai-cloud.is-flow-glow::after {
+    animation: none;
+    opacity: 0.45;
+    transform: scale(1);
+  }
+
+  .flow-code-pill.is-flow-glow,
+  .flow-device.flow-device-running {
+    animation: none;
+    box-shadow:
+      0 0 10px color-mix(in srgb, var(--flow-glow-color) 60%, transparent),
+      0 0 20px color-mix(in srgb, var(--flow-glow-color) 30%, transparent);
+  }
+}
