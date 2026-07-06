@@ -45,13 +45,13 @@ export default function WorkspaceLayout(): React.JSX.Element {
       >
         <ConversationThreadPanel session={session} />
         <CodePanel />
-        <DataPanel />
+        <TerminalPanel />
         <FlowBar />
         <ConversationComposerPanel session={session} />
         <div className="min-h-0 min-w-0 overflow-hidden [&>section]:h-full">
           <FilePanel />
         </div>
-        <TerminalPanel />
+        <DataPanel />
         <ResizeEdge
           axis="col"
           left={handlePositions[0]}

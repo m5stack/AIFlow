@@ -1,4 +1,4 @@
-import type { DeviceItem } from '../types/device'
+import type { DeviceItem, DeviceFileListResponse, DeviceFilePreviewResponse } from '../types/device'
 import { http } from './client'
 import { normalizeDeviceItem, normalizeDeviceList } from './deviceNormalize'
 
@@ -9,7 +9,10 @@ const API_PATH = {
   listByTempId: '/pair-code/by-temp-id',
   pushCode: (deviceId: string) => `/device/push-code/${encodeURIComponent(deviceId)}`,
   downloadFiles: '/localFiles/upload-resource-batch-and-push',
-  downloadCode: '/localFiles/upload-python-batch-and-push'
+  downloadCode: '/localFiles/upload-python-batch-and-push',
+  deviceFileList: '/localFiles/device-file-list',
+  previewDeviceFile: '/localFiles/device-file-preview',
+  deleteDeviceFile: '/localFiles/device-file-delete'
 } as const
 
 export interface BindDevicePayload {
@@ -81,3 +84,30 @@ export const downloadCode = async (
   deviceId: string,
   clientId?: string
 ): Promise<void> => uploadBatchAndPush(API_PATH.downloadCode, files, deviceId, clientId)
+
+
+export const getDeviceFileList = async (payload: {
+  deviceId: string,
+  clientId: string,
+  filePath: string
+}): Promise<DeviceFileListResponse> => {
+  const { data } = await http.postForm(API_PATH.deviceFileList, payload)
+  return data
+}
+
+export const previewDeviceFile = async (payload: {
+  deviceId: string,
+  clientId: string,
+  filePath: string
+}): Promise<DeviceFilePreviewResponse> => {
+  const { data } = await http.postForm(API_PATH.previewDeviceFile, payload)
+  return data
+}
+
+export const deleteDeviceFile = async (payload: {
+  deviceId: string,
+  clientId: string,
+  filePath: string
+}): Promise<void> => {
+  await http.postForm(API_PATH.deleteDeviceFile, payload)
+}

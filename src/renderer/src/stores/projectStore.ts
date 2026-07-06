@@ -10,7 +10,7 @@ import type {
   ProjectItem
 } from '../types/project'
 import { useClientIdStore } from './clientIdStore'
-// import { useDeviceFilePreviewStore } from './deviceFilePreviewStore'
+import { useDeviceFilePreviewStore } from './deviceFilePreviewStore'
 import { useDeviceStore } from './deviceStore'
 import { runProjectOnDevice } from '../utils/device/runProjectOnDevice'
 import { fileKindFromPath, resolveFileKind } from '../utils/project/fileKind'
@@ -403,7 +403,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   },
 
   selectProjectFile: (projectId, file) => {
-    // useDeviceFilePreviewStore.getState().clearPreview()
+    useDeviceFilePreviewStore.getState().clearPreview()
     if (projectId !== get().activeProjectId) {
       const { projects, selectedConvByProject } = get()
       set({
