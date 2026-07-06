@@ -25,6 +25,8 @@ import type {
   ProjectItem,
   SerialPortInfo,
   SkillItem,
+  McpServerItem,
+  CreateMcpServerPayload,
   UserModelConfig,
   UpdateUserModelConfigPayload
 } from '../shared/types'
@@ -244,6 +246,17 @@ const ipc: IpcAPI = {
     },
     open(slug: string): Promise<void> {
       return ipcRenderer.invoke('skill:open', slug)
+    }
+  },
+  mcp: {
+    list(): Promise<McpServerItem[]> {
+      return ipcRenderer.invoke('mcp:list')
+    },
+    create(payload: CreateMcpServerPayload): Promise<McpServerItem[]> {
+      return ipcRenderer.invoke('mcp:create', payload)
+    },
+    delete(serverId: string): Promise<McpServerItem[]> {
+      return ipcRenderer.invoke('mcp:delete', serverId)
     }
   }
 }

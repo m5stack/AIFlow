@@ -8,7 +8,9 @@ import { registerFirmwareIpc } from './ipc/firmwareIpc'
 import { registerProjectIpc } from './ipc/projectIpc'
 import { registerSerialIpc, registerSerialPortSelectedIpc } from './ipc/serialIpc'
 import { registerSkillIpc } from './ipc/skillIpc'
+import { registerMcpIpc } from './ipc/mcpIpc'
 import { ClientIdService } from './services/clientIdService'
+import { McpService } from './services/mcpService'
 import { ProjectService } from './services/projectService'
 import { SkillService } from './services/skillService'
 import { UserModelService } from './services/userModelService'
@@ -27,7 +29,8 @@ const BASE_DESIGN_HEIGHT = 900
 async function createWindow(
   projectService: ProjectService,
   userModelService: UserModelService,
-  skillService: SkillService
+  skillService: SkillService,
+  mcpService: McpService
 ): Promise<void> {
   const mainWindow = new BrowserWindow({
     width: 1440,
@@ -82,7 +85,7 @@ async function createWindow(
     return { action: 'deny' }
   })
 
-  registerAgentIpc(mainWindow, projectService, userModelService)
+  registerAgentIpc(mainWindow, projectService, userModelService, mcpService)
   registerSkillIpc(mainWindow, skillService, projectService)
 
   if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
@@ -119,18 +122,20 @@ app.whenReady().then(() => {
   const skillService = new SkillService()
   const projectService = new ProjectService(undefined, skillService)
   const userModelService = new UserModelService()
+  const mcpService = new McpService()
   const clientIdService = new ClientIdService()
   registerProjectIpc(projectService)
   registerModelIpc(userModelService)
+  registerMcpIpc(mcpService)
   registerClientIdIpc(clientIdService)
   registerFirmwareIpc()
   registerSerialPortSelectedIpc()
 
-  createWindow(projectService, userModelService, skillService)
+  createWindow(projectService, userModelService, skillService, mcpService)
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow(projectService, userModelService, skillService)
+      createWindow(projectService, userModelService, skillService, mcpService)
     }
   })
 })

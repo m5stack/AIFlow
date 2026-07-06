@@ -23,6 +23,8 @@ import type {
   ProjectItem,
   SerialPortInfo,
   SkillItem,
+  McpServerItem,
+  CreateMcpServerPayload,
   UserModelConfig,
   UpdateUserModelConfigPayload
 } from '../shared/types'
@@ -116,6 +118,12 @@ export interface SkillAPI {
   open(slug: string): Promise<void>
 }
 
+export interface McpAPI {
+  list(): Promise<McpServerItem[]>
+  create(payload: CreateMcpServerPayload): Promise<McpServerItem[]>
+  delete(serverId: string): Promise<McpServerItem[]>
+}
+
 export interface IpcAPI {
   project: ProjectAPI
   agent: AgentAPI
@@ -124,4 +132,5 @@ export interface IpcAPI {
   firmware: FirmwareAPI
   clientId: ClientIdAPI
   skill: SkillAPI
+  mcp: McpAPI
 }

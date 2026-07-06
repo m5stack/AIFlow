@@ -233,3 +233,28 @@ export interface SkillItem {
   description?: string
   builtin: boolean
 }
+
+export type McpTransport = 'stdio' | 'sse' | 'http'
+
+export interface McpServerItem {
+  id: string
+  name: string
+  transport: McpTransport
+  command?: string
+  args?: string[]
+  env?: Record<string, string>
+  url?: string
+  headers?: Record<string, string>
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateMcpServerPayload {
+  name: string
+  transport: McpTransport
+  command?: string
+  args?: string[]
+  env?: Record<string, string>
+  url?: string
+  headers?: Record<string, string>
+}

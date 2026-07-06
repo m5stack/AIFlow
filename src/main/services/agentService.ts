@@ -18,6 +18,7 @@ import { buildAgentSdkEnv } from '../agentEnv'
 import { getClaudeExecutablePath } from '../claudeExecutablePath'
 import { DEVICE_RESOURCE_RULES_CRITICAL, type ProjectService } from './projectService'
 import type { UserModelService } from './userModelService'
+import type { McpService } from './mcpService'
 
 type QueryHandle = {
   close(): void
@@ -207,6 +208,7 @@ export class AgentService {
   constructor(
     private readonly projectService: ProjectService,
     private readonly userModelService: UserModelService,
+    private readonly mcpService: McpService,
     private readonly sendEvent: AgentEventSender
   ) {}
 
@@ -259,12 +261,13 @@ export class AgentService {
     let currentQuery: (QueryHandle & AsyncIterable<unknown>) | undefined
 
     try {
-      const [{ query }, conversation, modelCredentials] = await Promise.all([
+      const [{ query }, conversation, modelCredentials, mcpServers] = await Promise.all([
         import('@anthropic-ai/claude-agent-sdk'),
         this.projectService.getConversation(params.projectId, params.convId),
         params.modelConfigId
           ? this.userModelService.getCredentials(params.modelConfigId)
-          : undefined
+          : undefined,
+        this.mcpService.toSdkMcpServers()
       ])
       const model = modelCredentials?.model || params.model
       const activeDevicePrompt = buildActiveDevicePrompt(params.activeDevice)
@@ -289,6 +292,7 @@ export class AgentService {
           disallowedTools: ['Bash'],
           skills: 'all',
           settingSources: ['project'],
+          ...(Object.keys(mcpServers).length > 0 ? { mcpServers } : {}),
           systemPrompt: {
             type: 'preset',
             preset: 'claude_code',
