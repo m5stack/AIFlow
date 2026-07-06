@@ -3,7 +3,7 @@ import { Toast } from '@heroui/react'
 import TopBar from './TopBar'
 import FlowBar from './FlowBar'
 import ConversationThreadPanel from '../conversation/ConversationThreadPanel'
-import ConversationComposerPanel from '../conversation/ConversationComposerPanel'
+import SkillPanel from '../skill/SkillPanel'
 import CodePanel from '../code/CodePanel'
 import DataPanel from '../data/DataPanel'
 import FilePanel from '../files/FilePanel'
@@ -40,18 +40,18 @@ export default function WorkspaceLayout(): React.JSX.Element {
 
       <section
         ref={containerRef}
-        className="relative grid min-h-0 flex-1 gap-x-4 gap-y-1 overflow-visible grid-rows-[minmax(0,1fr)_minmax(0,auto)_minmax(150px,0.48fr)]"
+        className="relative grid min-h-0 flex-1 gap-x-4 gap-y-1 overflow-visible grid-rows-[minmax(150px,0.48fr)_minmax(0,auto)_minmax(0,1fr)]"
         style={{ ...cssVariables, gridTemplateColumns }}
       >
-        <ConversationThreadPanel session={session} />
-        <CodePanel />
-        <TerminalPanel />
-        <FlowBar />
-        <ConversationComposerPanel session={session} />
+        <SkillPanel />
         <div className="min-h-0 min-w-0 overflow-hidden [&>section]:h-full">
           <FilePanel />
         </div>
         <DataPanel />
+        <FlowBar />
+        <ConversationThreadPanel session={session} />
+        <CodePanel />
+        <TerminalPanel />
         <ResizeEdge
           axis="col"
           left={handlePositions[0]}

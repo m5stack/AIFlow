@@ -19,6 +19,7 @@
   --color-status-disconnected: var(--status-disconnected);
   --color-accent: var(--accent);
   --color-accent-bg: var(--accent-bg);
+  --color-panel-tab-indicator: var(--panel-tab-indicator);
   --color-input-bg: var(--input-bg);
   --shadow-panel: var(--panel-shadow);
 }
@@ -42,6 +43,7 @@ html[data-theme='light'] {
   --flow-blue: #0ea5d4;
   --flow-green: #16a34a;
   --flow-amber: #d97706;
+  --panel-tab-indicator: #38d990;
   --accent: #0ea5d4;
   --accent-bg: rgba(14, 165, 212, 0.12);
   --status-connected: #16a34a;

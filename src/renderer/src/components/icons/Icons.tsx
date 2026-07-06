@@ -19,11 +19,13 @@ import {
   FaMoon,
   FaPen,
   FaPlay,
+  FaPlug,
   FaPlus,
   FaCircleQuestion,
   FaStop,
   FaSun,
   FaTrash,
+  FaWandMagicSparkles,
   FaXmark
 } from 'react-icons/fa6'
 import type { IconType } from 'react-icons'
@@ -56,6 +58,8 @@ export const CloseIcon = icon(FaXmark)
 export const SparklesIcon = ({ className = '', size = 16 }: IconProps) => (
   <FaBolt className={`text-white ${className}`} size={size} aria-hidden />
 )
+export const SkillIcon = icon(FaWandMagicSparkles)
+export const McpIcon = icon(FaPlug)
 export const LightbulbIcon = icon(FaLightbulb)
 export const QuestionCircleIcon = icon(FaCircleQuestion)
 export const ListIcon = icon(FaList)

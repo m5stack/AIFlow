@@ -6,10 +6,6 @@ export default function FlowAiNode(): React.JSX.Element {
 
   return (
     <div className="flow-ai-anchor">
-      <div className="flow-ai-dots" aria-hidden="true">
-        <span className="flow-ai-dot flow-ai-dot-sm" />
-        <span className="flow-ai-dot flow-ai-dot-lg" />
-      </div>
       <div className={`flow-ai-cloud${ai ? ' is-flow-glow flow-glow-ai' : ''}`}>
         <svg className="flow-ai-cloud-svg" viewBox="0 0 102 58" aria-hidden="true">
           <g fill="currentColor">
@@ -29,6 +25,10 @@ export default function FlowAiNode(): React.JSX.Element {
           </g>
         </svg>
         <span className="flow-ai-label">AI</span>
+      </div>
+      <div className="flow-ai-dots" aria-hidden="true">
+        <span className="flow-ai-dot flow-ai-dot-lg" />
+        <span className="flow-ai-dot flow-ai-dot-sm" />
       </div>
     </div>
   )

@@ -3,6 +3,7 @@ import { ChatBubbleIcon } from '../icons/Icons'
 import ConversationMessage from './ConversationMessage'
 import ConversationEmptyState from './ConversationEmptyState'
 import ConversationThinkingIndicator from './ConversationThinkingIndicator'
+import ConversationComposer from './ConversationComposer'
 import PanelShell from '../layout/PanelShell'
 import ConversationTabs from './ConversationTabs'
 import ConversationTurnMeta from './ConversationTurnMeta'
@@ -47,7 +48,7 @@ export default function ConversationThreadPanel({
       icon={<ChatBubbleIcon size={16} />}
       bodyClassName="flex flex-col gap-3 overflow-hidden"
     >
-      <div className="flex shrink-0 items-center gap-2 border-b border-line pb-2">
+      <div className="flex shrink-0 items-center gap-2 border-b border-line p-2">
         <ConversationTabs
           conversations={conversations}
           selectedConvId={selectedConvId}
@@ -81,7 +82,7 @@ export default function ConversationThreadPanel({
             </div>
           </div>
         ) : (
-          <div ref={scrollContainerRef} className="h-full overflow-y-auto">
+          <div ref={scrollContainerRef} className="h-full overflow-y-auto p-2">
             <div className="flex flex-col gap-4">
               {chatTurns.map((turn) => (
                 <React.Fragment key={turn.id}>
@@ -115,6 +116,8 @@ export default function ConversationThreadPanel({
           </div>
         )}
       </div>
+
+      <ConversationComposer session={session} />
     </PanelShell>
   )
 }

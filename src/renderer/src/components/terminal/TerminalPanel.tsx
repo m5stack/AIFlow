@@ -135,7 +135,7 @@ export default function TerminalPanel(): React.JSX.Element {
       className="bg-terminal-bg"
       bodyClassName="min-h-0 overflow-hidden p-0 font-mono text-[13px] leading-relaxed text-ink"
     >
-      <div className="h-full min-h-0">
+      <div className="h-full min-h-0 p-3">
         <TerminalView
           ref={terminalRef as React.Ref<TerminalViewHandle>}
           status={status}
