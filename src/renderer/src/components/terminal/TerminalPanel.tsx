@@ -25,23 +25,12 @@ const STATUS_COLORS = {
   error: '#f87171'
 } as const
 
-function TerminalStatusDot({
-  status,
-  errorMessage
-}: {
-  status: RealtimeTerminalStatus
-  errorMessage: string
-}): React.JSX.Element {
-  const statusLabel = STATUS_LABELS[status]
-  const tooltip = status === 'error' && errorMessage ? errorMessage : statusLabel
-
+function TerminalStatusDot({ status }: { status: RealtimeTerminalStatus }): React.JSX.Element {
   return (
     <span
+      aria-hidden
       className={`inline-block size-2 shrink-0 rounded-full ${status === 'connecting' ? 'animate-pulse' : ''}`}
       style={{ backgroundColor: STATUS_COLORS[status] }}
-      title={tooltip}
-      aria-label={statusLabel}
-      role="status"
     />
   )
 }
@@ -102,18 +91,39 @@ export default function TerminalPanel(): React.JSX.Element {
     </Button>
   )
 
+  const connectionButtonTitle =
+    status === 'error' && errorMessage ? errorMessage : STATUS_LABELS[status]
+
   const headerActions = (
-    <div className="flex shrink-0 items-center gap-2">
-      <TerminalStatusDot status={status} errorMessage={errorMessage} />
-      <button
-        type="button"
-        onClick={handleToggleConnection}
-        disabled={!canConfigureConnection || isConnecting || (!isConnected && !canConnect)}
-        className="inline-flex shrink-0 cursor-pointer items-center rounded-md border border-line bg-surface-2 px-2 py-1 text-[12px] text-muted transition-colors hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        {isConnecting ? `${REALTIME_CONNECT_TIMEOUT_SEC}s` : isConnected ? 'Disconnect' : 'Connect'}
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={handleToggleConnection}
+      disabled={!canConfigureConnection || isConnecting || (!isConnected && !canConnect)}
+      aria-label={isConnected ? 'Disconnect' : 'Connect'}
+      title={connectionButtonTitle}
+      className={`group inline-flex min-w-[96px] shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-line bg-surface-2 px-2 py-1 text-[12px] text-muted transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+        isConnecting
+          ? ''
+          : isConnected
+            ? 'enabled:hover:border-[#f87171] enabled:hover:bg-[#f87171]/10 enabled:hover:text-[#f87171]'
+            : 'enabled:hover:border-[#4ade80] enabled:hover:bg-[#4ade80]/10 enabled:hover:text-[#4ade80]'
+      }`}
+    >
+      <TerminalStatusDot status={status} />
+      {isConnecting ? (
+        `${REALTIME_CONNECT_TIMEOUT_SEC}s`
+      ) : isConnected ? (
+        <>
+          <span className="group-hover:hidden">Connected</span>
+          <span className="hidden group-hover:inline">Disconnect</span>
+        </>
+      ) : (
+        <>
+          <span className="group-hover:hidden">Disconnected</span>
+          <span className="hidden group-hover:inline">Connect</span>
+        </>
+      )}
+    </button>
   )
 
   return (
