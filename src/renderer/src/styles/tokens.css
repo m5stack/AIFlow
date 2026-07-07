@@ -15,6 +15,7 @@
   --color-flow-blue: var(--flow-blue);
   --color-flow-green: var(--flow-green);
   --color-flow-amber: var(--flow-amber);
+  --color-flow-violet: var(--flow-violet);
   --color-status-connected: var(--status-connected);
   --color-status-disconnected: var(--status-disconnected);
   --color-accent: var(--accent);
@@ -43,6 +44,7 @@ html[data-theme='light'] {
   --flow-blue: #0ea5d4;
   --flow-green: #16a34a;
   --flow-amber: #d97706;
+  --flow-violet: #7c3aed;
   --panel-tab-indicator: #38d990;
   --accent: #0ea5d4;
   --accent-bg: rgba(14, 165, 212, 0.12);
@@ -94,6 +96,7 @@ html[data-theme='dark'],
   --flow-blue: #22c7f4;
   --flow-green: #38d990;
   --flow-amber: #f59e0b;
+  --flow-violet: #a78bfa;
   --accent: #22c7f4;
   --accent-bg: rgba(34, 199, 244, 0.14);
   --status-connected: #38d990;

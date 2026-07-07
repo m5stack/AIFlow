@@ -38,10 +38,27 @@ export default function ConversationInput({
 
   const syncTalkGlow = useCallback(
     (nextValue: string) => {
-      setTalk(nextValue.trim() !== '')
+      const hasText = nextValue.trim() !== ''
+      setTalk(hasText)
+      if (hasText) {
+        const status = useFlowStatusStore.getState().device
+        if (status === 'success' || status === 'failed') {
+          useFlowStatusStore.getState().setDevice('idle')
+        }
+      }
     },
     [setTalk]
   )
+
+  const handleFocus = (): void => {
+    if (value.trim() !== '') {
+      setTalk(true)
+    }
+  }
+
+  const handleBlur = (): void => {
+    setTalk(false)
+  }
 
   useEffect(() => {
     return () => setTalk(false)
@@ -145,7 +162,8 @@ export default function ConversationInput({
             setValue(nextValue)
             syncTalkGlow(nextValue)
           }}
-          onBlur={() => syncTalkGlow(value)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           disabled={disabled}
           placeholder={placeholder}

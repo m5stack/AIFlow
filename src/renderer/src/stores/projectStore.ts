@@ -477,7 +477,10 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   updateProjectFileContent: (content) => {
     const { activeProjectId, codeFilePath, projects } = get()
     if (!activeProjectId || !codeFilePath) return
-    useFlowStatusStore.getState().pulseCode()
+    const flow = useFlowStatusStore.getState()
+    if (flow.device === 'success' || flow.device === 'failed') {
+      flow.setDevice('idle')
+    }
     set({
       selectedFileContent: content,
       projects: projects.map((project) =>

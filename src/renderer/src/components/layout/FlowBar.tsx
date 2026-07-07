@@ -25,22 +25,34 @@ export default function FlowBar(): React.JSX.Element {
       <FlowArrow variant="blue" bridge className="flow-arrow-bridge-1" />
 
       <FlowColumn className="min-w-0 col-start-2">
+        <FlowArrow variant="violet" direction="up" className="flow-arrow-vert flow-arrow-up" />
         <div className="flow-column-track-row flex w-full items-center justify-center">
           <FlowCodeNode />
         </div>
+        <FlowArrow variant="violet" direction="down" className="flow-arrow-vert flow-arrow-down" />
       </FlowColumn>
 
-      <div className="flow-cloud-download-fork">
+      {/* <div className="flow-cloud-download-fork">
         <FlowCloudDownloadNode />
-      </div>
+      </div> */}
 
       <FlowArrow variant="green" bridge className="flow-arrow-fork-device" />
-      <FlowArrow variant="amber" bridge className="flow-arrow-fork-data" />
+      {/* <FlowArrow variant="amber" bridge className="flow-arrow-fork-data" /> */}
 
       <FlowColumn className="flow-col-device min-w-0 col-start-3">
+        <FlowArrow
+          variant="green"
+          direction="up"
+          className="flow-arrow-vert flow-arrow-up flow-arrow-vert-device"
+        />
         <div className="flow-column-track-row flow-device-cluster flex w-full items-center">
           <FlowDevice />
         </div>
+        <FlowArrow
+          variant="green"
+          direction="down"
+          className="flow-arrow-vert flow-arrow-down flow-arrow-vert-device"
+        />
       </FlowColumn>
     </nav>
   )

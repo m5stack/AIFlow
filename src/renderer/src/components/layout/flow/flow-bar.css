@@ -651,41 +651,38 @@
 
 .flow-arrow {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 40px;
   height: 30px;
-  clip-path: polygon(0 25%, 58% 25%, 58% 0, 100% 50%, 58% 100%, 58% 75%, 0 75%);
+  color: var(--flow-blue);
+}
+
+.flow-arrow svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
 
 .flow-arrow-pink {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--flow-pink) 78%, #fff),
-    var(--flow-pink)
-  );
+  color: var(--flow-pink);
 }
 
 .flow-arrow-blue {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--flow-blue) 78%, #fff),
-    var(--flow-blue)
-  );
+  color: var(--flow-blue);
 }
 
 .flow-arrow-green {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--flow-green) 78%, #fff),
-    var(--flow-green)
-  );
+  color: var(--flow-green);
 }
 
 .flow-arrow-amber {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--flow-amber) 78%, #fff),
-    var(--flow-amber)
-  );
+  color: var(--flow-amber);
+}
+
+.flow-arrow-violet {
+  color: var(--flow-violet);
 }
 
 .flow-arrow-bridge {
@@ -697,6 +694,31 @@
   height: 30px;
   transform: translate(-50%, -50%);
   pointer-events: none;
+}
+
+.flow-arrow-vert {
+  position: absolute;
+  left: 50%;
+  z-index: 6;
+  flex-shrink: 0;
+  width: 26px;
+  height: 30px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.flow-arrow-up {
+  bottom: 100%;
+  margin-bottom: 2px;
+}
+
+.flow-arrow-down {
+  top: 100%;
+  margin-top: 2px;
+}
+
+.flow-arrow-vert-device {
+  left: calc(50% + 14px);
 }
 
 .flow-column-track {
@@ -785,37 +807,42 @@ html[data-theme='dark'] .flow-device,
 
 /* ── Breathing glow (呼吸灯) ── */
 
-@keyframes flow-breathe-halo {
-  0%,
-  100% {
-    opacity: 0.12;
-    transform: scale(0.88);
-  }
-  50% {
-    opacity: 0.75;
-    transform: scale(1.06);
-  }
-}
-
 @keyframes flow-breathe-shadow {
   0%,
   100% {
     box-shadow:
-      0 0 4px color-mix(in srgb, var(--flow-glow-color) 30%, transparent),
-      0 0 10px color-mix(in srgb, var(--flow-glow-color) 15%, transparent);
+      0 0 0 1px color-mix(in srgb, var(--flow-glow-color) 55%, transparent),
+      0 0 8px color-mix(in srgb, var(--flow-glow-color) 55%, transparent),
+      0 0 14px color-mix(in srgb, var(--flow-glow-color) 35%, transparent);
   }
   50% {
     box-shadow:
-      0 0 10px color-mix(in srgb, var(--flow-glow-color) 90%, transparent),
-      0 0 22px color-mix(in srgb, var(--flow-glow-color) 55%, transparent),
-      0 0 38px color-mix(in srgb, var(--flow-glow-color) 25%, transparent);
+      0 0 0 1px color-mix(in srgb, var(--flow-glow-color) 85%, transparent),
+      0 0 12px color-mix(in srgb, var(--flow-glow-color) 95%, transparent),
+      0 0 22px color-mix(in srgb, var(--flow-glow-color) 70%, transparent),
+      0 0 34px color-mix(in srgb, var(--flow-glow-color) 45%, transparent);
+  }
+}
+
+@keyframes flow-breathe-drop {
+  0%,
+  100% {
+    filter:
+      drop-shadow(0 0 1px color-mix(in srgb, var(--flow-glow-color) 55%, transparent))
+      drop-shadow(0 0 8px color-mix(in srgb, var(--flow-glow-color) 55%, transparent))
+      drop-shadow(0 0 14px color-mix(in srgb, var(--flow-glow-color) 35%, transparent));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 1px color-mix(in srgb, var(--flow-glow-color) 85%, transparent))
+      drop-shadow(0 0 12px color-mix(in srgb, var(--flow-glow-color) 95%, transparent))
+      drop-shadow(0 0 22px color-mix(in srgb, var(--flow-glow-color) 70%, transparent));
   }
 }
 
 .flow-glow-talk,
 .flow-glow-ai,
-.flow-glow-code,
-.flow-device-running {
+.flow-glow-code {
   --flow-glow-color: var(--flow-blue);
 }
 
@@ -828,65 +855,88 @@ html[data-theme='dark'] .flow-device,
 }
 
 .flow-glow-code {
-  --flow-glow-color: var(--flow-green);
+  --flow-glow-color: var(--flow-violet);
+}
+
+@keyframes flow-blink-shadow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--flow-glow-color) 55%, transparent),
+      0 0 8px color-mix(in srgb, var(--flow-glow-color) 55%, transparent),
+      0 0 14px color-mix(in srgb, var(--flow-glow-color) 35%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--flow-glow-color) 85%, transparent),
+      0 0 12px color-mix(in srgb, var(--flow-glow-color) 95%, transparent),
+      0 0 22px color-mix(in srgb, var(--flow-glow-color) 70%, transparent),
+      0 0 34px color-mix(in srgb, var(--flow-glow-color) 45%, transparent);
+  }
 }
 
 .flow-device-running {
-  --flow-glow-color: var(--flow-blue);
+  --flow-glow-color: var(--flow-amber);
 }
 
-/* SVG nodes: blurred halo pseudo-element */
-.flow-talk-bubble.is-flow-glow::after,
-.flow-ai-cloud.is-flow-glow::after {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  pointer-events: none;
-  border-radius: 50%;
-  background: var(--flow-glow-color);
-  filter: blur(14px);
-  animation: flow-breathe-halo 2.2s ease-in-out infinite;
-}
-
-.flow-talk-bubble.is-flow-glow::after {
-  inset: 4px 8px 18px;
-}
-
-.flow-ai-cloud.is-flow-glow::after {
-  inset: -4px -6px;
+/* SVG nodes: animated drop-shadow */
+.flow-talk-bubble.is-flow-glow,
+.flow-ai-cloud.is-flow-glow {
+  animation: flow-breathe-drop 2.2s ease-in-out infinite;
 }
 
 /* Rect nodes: animated box-shadow */
-.flow-code-pill.is-flow-glow,
-.flow-device.flow-device-running {
+.flow-code-pill.is-flow-glow {
+  border-color: color-mix(in srgb, var(--flow-glow-color) 70%, var(--flow-node-border));
   animation: flow-breathe-shadow 2.2s ease-in-out infinite;
 }
 
-.flow-device-success {
-  box-shadow:
-    0 0 8px color-mix(in srgb, var(--flow-green) 55%, transparent),
-    0 0 20px color-mix(in srgb, var(--flow-green) 30%, transparent);
+.flow-device.flow-device-running {
+  border-color: color-mix(in srgb, var(--flow-glow-color) 70%, var(--flow-node-border));
+  animation: flow-blink-shadow 0.9s ease-in-out infinite;
 }
 
-.flow-device-failed {
+html .flow-device.flow-device-success {
+  border-color: color-mix(in srgb, var(--flow-green) 70%, var(--flow-node-border));
   box-shadow:
-    0 0 8px color-mix(in srgb, #e5484d 55%, transparent),
-    0 0 20px color-mix(in srgb, #e5484d 30%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--flow-green) 75%, transparent),
+    0 0 10px color-mix(in srgb, var(--flow-green) 85%, transparent),
+    0 0 18px color-mix(in srgb, var(--flow-green) 55%, transparent);
+}
+
+html .flow-device.flow-device-failed {
+  border-color: color-mix(in srgb, #e5484d 70%, var(--flow-node-border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #e5484d 75%, transparent),
+    0 0 10px color-mix(in srgb, #e5484d 85%, transparent),
+    0 0 18px color-mix(in srgb, #e5484d 55%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .flow-talk-bubble.is-flow-glow::after,
-  .flow-ai-cloud.is-flow-glow::after {
+  .flow-talk-bubble.is-flow-glow,
+  .flow-ai-cloud.is-flow-glow {
     animation: none;
-    opacity: 0.45;
-    transform: scale(1);
+    filter:
+      drop-shadow(0 0 1px color-mix(in srgb, var(--flow-glow-color) 75%, transparent))
+      drop-shadow(0 0 10px color-mix(in srgb, var(--flow-glow-color) 85%, transparent))
+      drop-shadow(0 0 18px color-mix(in srgb, var(--flow-glow-color) 55%, transparent));
   }
 
-  .flow-code-pill.is-flow-glow,
+  .flow-code-pill.is-flow-glow {
+    animation: none;
+    border-color: color-mix(in srgb, var(--flow-glow-color) 70%, var(--flow-node-border));
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--flow-glow-color) 75%, transparent),
+      0 0 10px color-mix(in srgb, var(--flow-glow-color) 85%, transparent),
+      0 0 18px color-mix(in srgb, var(--flow-glow-color) 55%, transparent);
+  }
+
   .flow-device.flow-device-running {
     animation: none;
+    border-color: color-mix(in srgb, var(--flow-amber) 70%, var(--flow-node-border));
     box-shadow:
-      0 0 10px color-mix(in srgb, var(--flow-glow-color) 60%, transparent),
-      0 0 20px color-mix(in srgb, var(--flow-glow-color) 30%, transparent);
+      0 0 0 1px color-mix(in srgb, var(--flow-amber) 75%, transparent),
+      0 0 10px color-mix(in srgb, var(--flow-amber) 85%, transparent),
+      0 0 18px color-mix(in srgb, var(--flow-amber) 55%, transparent);
   }
 }

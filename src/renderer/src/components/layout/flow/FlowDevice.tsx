@@ -37,6 +37,8 @@ export default function FlowDevice(): React.JSX.Element {
   const setAutoRunAfterChatEnabled = useProjectStore((s) => s.setAutoRunAfterChatEnabled)
   const deviceGlow = useFlowStatusStore((s) => s.device)
   const setDeviceGlow = useFlowStatusStore((s) => s.setDevice)
+  const talk = useFlowStatusStore((s) => s.talk)
+  const showGlow = !talk && deviceGlow !== 'idle'
 
   const { activeProjectId, activeProject, selectedDevice } = useActiveProjectDevices()
 
@@ -232,11 +234,11 @@ export default function FlowDevice(): React.JSX.Element {
       <div className="flow-device-wrap">
         <div
           className={`flow-device${
-            deviceGlow === 'running'
+            showGlow && deviceGlow === 'running'
               ? ' flow-device-running'
-              : deviceGlow === 'success'
+              : showGlow && deviceGlow === 'success'
                 ? ' flow-device-success'
-                : deviceGlow === 'failed'
+                : showGlow && deviceGlow === 'failed'
                   ? ' flow-device-failed'
                   : ''
           }`}

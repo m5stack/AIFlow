@@ -1,9 +1,10 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import Editor, { loader } from '@monaco-editor/react'
 import * as monaco from 'monaco-editor'
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 import { useThemeStore } from '../../stores/themeStore'
+import { useFlowStatusStore } from '../../stores/flowStatusStore'
 
 // Use local Monaco instead of CDN
 self.MonacoEnvironment = {
@@ -30,7 +31,25 @@ export default function CodeEditor({
   onCodeChange
 }: CodeEditorProps): React.JSX.Element {
   const resolvedTheme = useThemeStore((s) => s.resolved)
+  const setCodeFocus = useFlowStatusStore((s) => s.setCodeFocus)
+  const disposablesRef = useRef<monaco.IDisposable[]>([])
+  const readOnlyRef = useRef(readOnly)
   const editorTheme = resolvedTheme === 'dark' ? 'vs-dark' : 'vs'
+
+  useEffect(() => {
+    readOnlyRef.current = readOnly
+    if (readOnly) {
+      setCodeFocus(false)
+    }
+  }, [readOnly, setCodeFocus])
+
+  useEffect(() => {
+    return () => {
+      disposablesRef.current.forEach((disposable) => disposable.dispose())
+      disposablesRef.current = []
+      setCodeFocus(false)
+    }
+  }, [setCodeFocus])
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -40,6 +59,15 @@ export default function CodeEditor({
         language={language}
         value={value}
         onChange={readOnly ? undefined : (nextValue) => onCodeChange?.(nextValue ?? '')}
+        onMount={(editor) => {
+          disposablesRef.current.forEach((disposable) => disposable.dispose())
+          disposablesRef.current = [
+            editor.onDidFocusEditorText(() => {
+              if (!readOnlyRef.current) setCodeFocus(true)
+            }),
+            editor.onDidBlurEditorText(() => setCodeFocus(false))
+          ]
+        }}
         theme={editorTheme}
         options={{
           fontSize: 13,
