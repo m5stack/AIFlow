@@ -241,6 +241,9 @@ const ipc: IpcAPI = {
     add(): Promise<SkillItem[]> {
       return ipcRenderer.invoke('skill:add')
     },
+    install(fileName: string, data: Uint8Array): Promise<SkillItem[]> {
+      return ipcRenderer.invoke('skill:install', fileName, data)
+    },
     delete(slug: string): Promise<SkillItem[]> {
       return ipcRenderer.invoke('skill:delete', slug)
     },

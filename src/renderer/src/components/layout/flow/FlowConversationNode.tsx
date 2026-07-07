@@ -13,7 +13,7 @@ export default function FlowConversationNode(): React.JSX.Element {
             <polygon points="28,40 24,80 54,50" />
           </g>
         </svg>
-        <span className="flow-talk-label">Talk</span>
+        <span className="flow-talk-label">Chat</span>
       </div>
     </div>
   )

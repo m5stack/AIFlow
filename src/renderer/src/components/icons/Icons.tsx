@@ -10,6 +10,7 @@ import {
   FaCode,
   FaComment,
   FaDatabase,
+  FaDownload,
   FaEraser,
   FaFolder,
   FaGear,
@@ -42,6 +43,7 @@ function icon(IconComponent: IconType, defaultSize = 16) {
 }
 
 export const RefreshIcon = icon(FaArrowsRotate)
+export const DownloadIcon = icon(FaDownload)
 export const FolderIcon = icon(FaFolder)
 export const ChevronDownIcon = icon(FaChevronDown)
 export const ChevronLeftIcon = icon(FaChevronLeft)

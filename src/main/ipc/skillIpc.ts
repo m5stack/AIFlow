@@ -9,15 +9,14 @@ export function registerSkillIpc(
   skillService: SkillService,
   projectService: ProjectService
 ): void {
-  ;['skill:list', 'skill:add', 'skill:delete', 'skill:open'].forEach((channel) =>
+  ;['skill:list', 'skill:add', 'skill:delete', 'skill:open', 'skill:install'].forEach((channel) =>
     ipcMain.removeHandler(channel)
   )
 
   ipcMain.handle('skill:list', () => skillService.listSkills())
   ipcMain.handle('skill:add', async () => {
-    const before = await skillService.listSkills()
-    const skills = await skillService.addSkillFromFolder(mainWindow)
-    if (skills.length !== before.length) {
+    const { skills, imported } = await skillService.addSkill(mainWindow)
+    if (imported) {
       await projectService.applySkillsChange()
     }
     return skills
@@ -28,4 +27,12 @@ export function registerSkillIpc(
     return skills
   })
   ipcMain.handle('skill:open', (_event, slug: string) => skillService.openSkillDirectory(slug))
+  ipcMain.handle(
+    'skill:install',
+    async (_event, fileName: string, data: Uint8Array): Promise<SkillItem[]> => {
+      const skills = await skillService.installSkillFromZip(fileName, Buffer.from(data))
+      await projectService.applySkillsChange()
+      return skills
+    }
+  )
 }

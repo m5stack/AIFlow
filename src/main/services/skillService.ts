@@ -1,7 +1,22 @@
 import { app, dialog, shell, type BrowserWindow } from 'electron'
-import { cp, lstat, mkdir, readFile, readdir, readlink, rm, stat, symlink } from 'fs/promises'
+import AdmZip from 'adm-zip'
+import {
+  cp,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  readlink,
+  rm,
+  stat,
+  symlink
+} from 'fs/promises'
 import { realpathSync } from 'fs'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
+import { tmpdir } from 'os'
+import { parseSkillFileName } from '../../shared/skillVersion'
+import { resolveSkillDisplayName } from '../../shared/skillDisplay'
 import type { SkillItem } from '../../shared/types'
 
 const BUNDLED_SKILLS_DIR_NAME = 'skills'
@@ -47,19 +62,15 @@ const parseSkillFrontmatter = (raw: string): SkillFrontmatter => {
     const separator = line.indexOf(':')
     if (separator === -1) continue
     const key = line.slice(0, separator).trim()
-    const value = line.slice(separator + 1).trim()
+    const value = line
+      .slice(separator + 1)
+      .trim()
+      .replace(/^["']|["']$/g, '')
     if (key === 'name') frontmatter.name = value
     if (key === 'description') frontmatter.description = value
   }
   return frontmatter
 }
-
-const formatSkillName = (slug: string): string =>
-  slug
-    .split(/[-_.]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ')
 
 export class SkillService {
   private readonly userSkillsDir: string
@@ -85,22 +96,59 @@ export class SkillService {
       this.scanSkillRoot(this.getBundledSkillsRoot(), true),
       this.scanSkillRoot(this.getUserSkillsRoot(), false)
     ])
-    return [...bundled, ...user].sort((a, b) => {
+    const shadowed = this.applyBuiltinShadowing(bundled, user)
+    return shadowed.sort((a, b) => {
       if (a.builtin !== b.builtin) return a.builtin ? -1 : 1
       return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
     })
   }
 
-  async addSkillFromFolder(parentWindow: BrowserWindow): Promise<SkillItem[]> {
-    const result = await dialog.showOpenDialog(parentWindow, {
-      title: 'Import Skill Folder',
-      properties: ['openDirectory']
-    })
-    if (result.canceled || result.filePaths.length === 0) {
-      return this.listSkills()
+  async installSkillFromZip(fileName: string, data: Buffer): Promise<SkillItem[]> {
+    const normalizedFileName = basename(fileName.trim())
+    if (!normalizedFileName || !normalizedFileName.toLowerCase().endsWith('.zip')) {
+      throw new Error('Skill package must be a .zip file.')
     }
 
-    const sourceDir = result.filePaths[0]
+    const slug = normalizedFileName.replace(/\.zip$/i, '')
+    const { base: targetBase } = parseSkillFileName(slug)
+    const tempDir = await mkdtemp(join(tmpdir(), 'aiflow-skill-'))
+
+    try {
+      const zip = new AdmZip(data)
+      zip.extractAllTo(tempDir, true)
+
+      const skillRoot = await this.resolveExtractedSkillRoot(tempDir)
+      const destDir = join(this.userSkillsDir, slug)
+
+      await mkdir(this.userSkillsDir, { recursive: true })
+      await this.removeUserSkillsByBase(targetBase, slug)
+      await rm(destDir, { recursive: true, force: true })
+      await cp(skillRoot, destDir, { recursive: true })
+    } finally {
+      await rm(tempDir, { recursive: true, force: true })
+    }
+
+    return this.listSkills()
+  }
+
+  async addSkill(parentWindow: BrowserWindow): Promise<{ skills: SkillItem[]; imported: boolean }> {
+    const result = await dialog.showOpenDialog(parentWindow, {
+      title: 'Import Skill',
+      properties: ['openFile', 'openDirectory'],
+      filters: [{ name: 'Skill Package', extensions: ['zip'] }]
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return { skills: await this.listSkills(), imported: false }
+    }
+
+    const selectedPath = result.filePaths[0]
+    if (selectedPath.toLowerCase().endsWith('.zip')) {
+      const data = await readFile(selectedPath)
+      const skills = await this.installSkillFromZip(basename(selectedPath), data)
+      return { skills, imported: true }
+    }
+
+    const sourceDir = selectedPath
     const skillFilePath = join(sourceDir, SKILL_FILE_NAME)
     try {
       await stat(skillFilePath)
@@ -114,7 +162,7 @@ export class SkillService {
 
     await mkdir(this.userSkillsDir, { recursive: true })
     await cp(sourceDir, destDir, { recursive: true })
-    return this.listSkills()
+    return { skills: await this.listSkills(), imported: true }
   }
 
   async deleteUserSkill(slug: string): Promise<SkillItem[]> {
@@ -278,11 +326,71 @@ export class SkillService {
       this.scanSkillRoot(this.getBundledSkillsRoot(), true),
       this.scanSkillRoot(this.getUserSkillsRoot(), false)
     ])
-    return [...bundled, ...user].map((skill) => ({
+    return this.applyBuiltinShadowing(bundled, user).map((skill) => ({
       slug: skill.slug,
       sourcePath: skill.sourcePath,
       builtin: skill.builtin
     }))
+  }
+
+  private applyBuiltinShadowing(
+    bundled: Array<SkillItem & { sourcePath: string }>,
+    user: Array<SkillItem & { sourcePath: string }>
+  ): Array<SkillItem & { sourcePath: string }> {
+    const userBases = new Set(user.map((skill) => parseSkillFileName(skill.slug).base))
+    const visibleBundled = bundled.filter(
+      (skill) => !userBases.has(parseSkillFileName(skill.slug).base)
+    )
+    return [...visibleBundled, ...user]
+  }
+
+  private async resolveExtractedSkillRoot(extractDir: string): Promise<string> {
+    const rootSkillFile = join(extractDir, SKILL_FILE_NAME)
+    try {
+      await stat(rootSkillFile)
+      return extractDir
+    } catch {
+      // skill may be nested one level down
+    }
+
+    const entries = await readdir(extractDir, { withFileTypes: true })
+    const directories = entries.filter(
+      (entry) => entry.isDirectory() && !entry.name.startsWith('.')
+    )
+    if (directories.length !== 1) {
+      throw new Error(
+        `Extracted package must contain ${SKILL_FILE_NAME} at the root or in a single folder.`
+      )
+    }
+
+    const nestedRoot = join(extractDir, directories[0].name)
+    try {
+      await stat(join(nestedRoot, SKILL_FILE_NAME))
+      return nestedRoot
+    } catch {
+      throw new Error(`Extracted package must contain ${SKILL_FILE_NAME}.`)
+    }
+  }
+
+  private async removeUserSkillsByBase(baseName: string, keepSlug?: string): Promise<void> {
+    let entries
+    try {
+      entries = await readdir(this.userSkillsDir, { withFileTypes: true })
+    } catch {
+      return
+    }
+
+    await Promise.all(
+      entries.map(async (entry) => {
+        if (!entry.isDirectory() || entry.name.startsWith('.')) return
+        if (keepSlug && entry.name === keepSlug) return
+        if (parseSkillFileName(entry.name).base !== baseName) return
+
+        const targetDir = join(this.userSkillsDir, entry.name)
+        if (!isPathInside(this.getUserSkillsRoot(), resolve(targetDir))) return
+        await rm(targetDir, { recursive: true, force: true })
+      })
+    )
   }
 
   private async scanSkillRoot(
@@ -309,10 +417,12 @@ export class SkillService {
       }
 
       const frontmatter = parseSkillFrontmatter(await readFile(skillFilePath, 'utf8'))
+      const { version } = parseSkillFileName(entry.name)
       skills.push({
         slug: entry.name,
-        name: frontmatter.name?.trim() || formatSkillName(entry.name),
+        name: resolveSkillDisplayName(entry.name, frontmatter.name),
         description: frontmatter.description?.trim() || undefined,
+        version: version || undefined,
         builtin,
         sourcePath
       })

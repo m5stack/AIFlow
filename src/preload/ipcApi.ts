@@ -114,6 +114,7 @@ export interface ClientIdAPI {
 export interface SkillAPI {
   list(): Promise<SkillItem[]>
   add(): Promise<SkillItem[]>
+  install(fileName: string, data: Uint8Array): Promise<SkillItem[]>
   delete(slug: string): Promise<SkillItem[]>
   open(slug: string): Promise<void>
 }

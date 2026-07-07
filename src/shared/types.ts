@@ -231,6 +231,8 @@ export interface SkillItem {
   slug: string
   name: string
   description?: string
+  /** Parsed from trailing digits in the folder/slug name, e.g. `1.0.9`. */
+  version?: string
   builtin: boolean
 }
 
