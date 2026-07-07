@@ -1,6 +1,6 @@
 import type { ChatTokenUsage } from '../../types/project'
 
-function formatTokenCount(count: number): string {
+export function formatTokenCount(count: number): string {
   if (count >= 10_000) {
     return `${(count / 1000).toFixed(1)}k`
   }

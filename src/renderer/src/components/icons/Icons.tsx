@@ -7,6 +7,7 @@ import {
   FaChevronDown,
   FaChevronLeft,
   FaChevronRight,
+  FaChartColumn,
   FaCode,
   FaComment,
   FaDatabase,
@@ -68,6 +69,7 @@ export const ListIcon = icon(FaList)
 export const ZapIcon = icon(FaBolt)
 export const EditIcon = icon(FaPen)
 export const TrashIcon = icon(FaTrash)
+export const ChartIcon = icon(FaChartColumn)
 export const CodeIcon = icon(FaCode)
 export const DeviceIcon = icon(FaMobileScreen)
 export const CheckIcon = icon(FaCheck)

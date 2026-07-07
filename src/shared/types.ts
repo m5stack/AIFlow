@@ -13,6 +13,42 @@ export interface ChatTokenUsage {
   totalCostUsd?: number
 }
 
+export interface TokenUsageRecord extends ChatTokenUsage {
+  timestamp: string
+  model: string
+  modelConfigId?: string
+  label?: string
+}
+
+export interface TokenUsageModelStat {
+  model: string
+  label: string
+  inputTokens: number
+  outputTokens: number
+  cacheTokens: number
+  totalTokens: number
+  totalCostUsd: number
+  turns: number
+}
+
+export interface TokenUsageDailyModelStat {
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
+}
+
+export interface TokenUsageDailyStat {
+  date: string
+  byModel: Record<string, TokenUsageDailyModelStat>
+}
+
+export interface TokenUsageStats {
+  generatedAt: string
+  retentionDays: 3
+  byModel: TokenUsageModelStat[]
+  daily: TokenUsageDailyStat[]
+}
+
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'

@@ -8,11 +8,13 @@ import { registerFirmwareIpc } from './ipc/firmwareIpc'
 import { registerProjectIpc } from './ipc/projectIpc'
 import { registerSerialIpc, registerSerialPortSelectedIpc } from './ipc/serialIpc'
 import { registerSkillIpc } from './ipc/skillIpc'
+import { registerTokenUsageIpc } from './ipc/tokenUsageIpc'
 import { registerMcpIpc } from './ipc/mcpIpc'
 import { ClientIdService } from './services/clientIdService'
 import { McpService } from './services/mcpService'
 import { ProjectService } from './services/projectService'
 import { SkillService } from './services/skillService'
+import { TokenUsageService } from './services/tokenUsageService'
 import { UserModelService } from './services/userModelService'
 
 // Enable Web Serial API
@@ -30,7 +32,8 @@ async function createWindow(
   projectService: ProjectService,
   userModelService: UserModelService,
   skillService: SkillService,
-  mcpService: McpService
+  mcpService: McpService,
+  tokenUsageService: TokenUsageService
 ): Promise<void> {
   const mainWindow = new BrowserWindow({
     width: 1440,
@@ -85,7 +88,7 @@ async function createWindow(
     return { action: 'deny' }
   })
 
-  registerAgentIpc(mainWindow, projectService, userModelService, mcpService)
+  registerAgentIpc(mainWindow, projectService, userModelService, mcpService, tokenUsageService)
   registerSkillIpc(mainWindow, skillService, projectService)
 
   if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
@@ -124,18 +127,20 @@ app.whenReady().then(() => {
   const userModelService = new UserModelService()
   const mcpService = new McpService()
   const clientIdService = new ClientIdService()
+  const tokenUsageService = new TokenUsageService()
   registerProjectIpc(projectService)
   registerModelIpc(userModelService)
   registerMcpIpc(mcpService)
   registerClientIdIpc(clientIdService)
+  registerTokenUsageIpc(tokenUsageService)
   registerFirmwareIpc()
   registerSerialPortSelectedIpc()
 
-  createWindow(projectService, userModelService, skillService, mcpService)
+  createWindow(projectService, userModelService, skillService, mcpService, tokenUsageService)
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow(projectService, userModelService, skillService, mcpService)
+      createWindow(projectService, userModelService, skillService, mcpService, tokenUsageService)
     }
   })
 })

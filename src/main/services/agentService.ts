@@ -19,6 +19,7 @@ import { getClaudeExecutablePath } from '../claudeExecutablePath'
 import { DEVICE_RESOURCE_RULES_CRITICAL, type ProjectService } from './projectService'
 import type { UserModelService } from './userModelService'
 import type { McpService } from './mcpService'
+import type { TokenUsageService } from './tokenUsageService'
 
 type QueryHandle = {
   close(): void
@@ -182,6 +183,19 @@ const extractTokenUsage = (message: Record<string, unknown>): ChatTokenUsage | u
   return tokenUsage
 }
 
+type TurnModelInfo = {
+  model: string
+  modelConfigId?: string
+  label?: string
+}
+
+const resolveModelFromMessage = (message: Record<string, unknown>): string | undefined => {
+  const modelUsage = message.modelUsage as Record<string, unknown> | undefined
+  if (!modelUsage || typeof modelUsage !== 'object') return undefined
+  const keys = Object.keys(modelUsage)
+  return keys.length > 0 ? keys[0] : undefined
+}
+
 /** Collect file paths touched by file-editing tool_use blocks in an assistant message. */
 const changedPathsFromContent = (content: unknown): string[] => {
   if (!Array.isArray(content)) return []
@@ -204,11 +218,13 @@ export class AgentService {
   private readonly pendingPermissions = new Map<string, PermissionWaiter>()
   private readonly streamState = new Map<string, StreamState>()
   private readonly finalizePromises = new Map<string, Promise<void>>()
+  private readonly turnModels = new Map<string, TurnModelInfo>()
 
   constructor(
     private readonly projectService: ProjectService,
     private readonly userModelService: UserModelService,
     private readonly mcpService: McpService,
+    private readonly tokenUsageService: TokenUsageService,
     private readonly sendEvent: AgentEventSender
   ) {}
 
@@ -269,7 +285,17 @@ export class AgentService {
           : undefined,
         this.mcpService.toSdkMcpServers()
       ])
-      const model = modelCredentials?.model || params.model
+      const model = modelCredentials?.model || params.model || 'unknown'
+      let label: string | undefined
+      if (params.modelConfigId) {
+        const models = await this.userModelService.listModels()
+        label = models.find((item) => item.id === params.modelConfigId)?.label
+      }
+      this.turnModels.set(params.convId, {
+        model,
+        modelConfigId: params.modelConfigId,
+        label
+      })
       const activeDevicePrompt = buildActiveDevicePrompt(params.activeDevice)
       const turnContext = await this.projectService.getProjectTurnContext(params.projectId)
       const turnPrompt = buildTurnPrompt(params.prompt, turnContext.turnPromptPrefix)
@@ -413,6 +439,7 @@ export class AgentService {
         message: error instanceof Error ? error.message : 'Unknown agent error.'
       })
     } finally {
+      this.turnModels.delete(params.convId)
       if (currentQuery && this.activeQueries.get(params.convId) === currentQuery) {
         this.activeQueries.delete(params.convId)
       }
@@ -732,6 +759,17 @@ export class AgentService {
           params.convId,
           tokenUsage
         )
+
+        const turnModel = this.turnModels.get(params.convId)
+        const model =
+          turnModel?.model || params.model || resolveModelFromMessage(message) || 'unknown'
+        await this.tokenUsageService.record({
+          timestamp: new Date().toISOString(),
+          model,
+          modelConfigId: turnModel?.modelConfigId,
+          label: turnModel?.label,
+          ...tokenUsage
+        })
       }
 
       this.sendEvent('turnComplete', {

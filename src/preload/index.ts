@@ -28,7 +28,8 @@ import type {
   McpServerItem,
   CreateMcpServerPayload,
   UserModelConfig,
-  UpdateUserModelConfigPayload
+  UpdateUserModelConfigPayload,
+  TokenUsageStats
 } from '../shared/types'
 import type { IpcAPI } from './ipcApi'
 
@@ -260,6 +261,11 @@ const ipc: IpcAPI = {
     },
     delete(serverId: string): Promise<McpServerItem[]> {
       return ipcRenderer.invoke('mcp:delete', serverId)
+    }
+  },
+  tokenUsage: {
+    getStats(): Promise<TokenUsageStats> {
+      return ipcRenderer.invoke('tokenUsage:getStats')
     }
   }
 }

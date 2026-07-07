@@ -15,6 +15,7 @@ import { AgentService } from '../services/agentService'
 import type { ProjectService } from '../services/projectService'
 import type { UserModelService } from '../services/userModelService'
 import type { McpService } from '../services/mcpService'
+import type { TokenUsageService } from '../services/tokenUsageService'
 
 type AgentEventMap = {
   message: AgentMessageEvent
@@ -38,13 +39,20 @@ export function registerAgentIpc(
   mainWindow: BrowserWindow,
   projectService: ProjectService,
   userModelService: UserModelService,
-  mcpService: McpService
+  mcpService: McpService,
+  tokenUsageService: TokenUsageService
 ): AgentService {
-  const agentService = new AgentService(projectService, userModelService, mcpService, (channel, payload) => {
-    if (!mainWindow.webContents.isDestroyed()) {
-      mainWindow.webContents.send(rendererChannel[channel], payload)
+  const agentService = new AgentService(
+    projectService,
+    userModelService,
+    mcpService,
+    tokenUsageService,
+    (channel, payload) => {
+      if (!mainWindow.webContents.isDestroyed()) {
+        mainWindow.webContents.send(rendererChannel[channel], payload)
+      }
     }
-  })
+  )
 
   ipcMain.removeHandler('agent:startTurn')
   ipcMain.removeHandler('agent:respondPermission')

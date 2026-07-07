@@ -26,7 +26,8 @@ import type {
   McpServerItem,
   CreateMcpServerPayload,
   UserModelConfig,
-  UpdateUserModelConfigPayload
+  UpdateUserModelConfigPayload,
+  TokenUsageStats
 } from '../shared/types'
 
 export interface SerialAPI {
@@ -125,6 +126,10 @@ export interface McpAPI {
   delete(serverId: string): Promise<McpServerItem[]>
 }
 
+export interface TokenUsageAPI {
+  getStats(): Promise<TokenUsageStats>
+}
+
 export interface IpcAPI {
   project: ProjectAPI
   agent: AgentAPI
@@ -134,4 +139,5 @@ export interface IpcAPI {
   clientId: ClientIdAPI
   skill: SkillAPI
   mcp: McpAPI
+  tokenUsage: TokenUsageAPI
 }
