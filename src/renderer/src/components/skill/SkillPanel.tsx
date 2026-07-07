@@ -20,10 +20,8 @@ export default function SkillPanel(): React.JSX.Element {
   return (
     <PanelShell
       icon={headerIcon}
-      title={
-        <PanelTabs tabs={TABS} activeId={activeTab} onChange={setActiveTab} />
-      }
-      bodyClassName="flex min-h-0 flex-col p-3.5"
+      title={<PanelTabs tabs={TABS} activeId={activeTab} onChange={setActiveTab} />}
+      bodyClassName="flex min-h-0 flex-col"
     >
       <PanelTabPane key={activeTab}>
         {activeTab === 'skill' ? <SkillTab /> : <McpTab />}

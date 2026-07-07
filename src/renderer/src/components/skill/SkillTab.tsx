@@ -7,7 +7,8 @@ import BrowseSkillDialog from './BrowseSkillDialog'
 import UpgradeSkillDialog from './UpgradeSkillDialog'
 import { DownloadIcon, PlusIcon, RefreshIcon, TrashIcon } from '../icons/Icons'
 
-const CARD_SIZE = 'size-16'
+const CARD_ICON_SIZE = 'size-18'
+const CARD_WIDTH = 'w-18'
 
 const skillInitial = (name: string): string => {
   const trimmed = name.trim()
@@ -29,48 +30,78 @@ function SkillCard({
   onDelete?: (slug: string) => void
   onUpgrade?: (slug: string) => void
 }): React.JSX.Element {
-  const title = hasUpdate ? `${skill.name} (update available)` : skill.name
+  const handleOpen = (): void => {
+    onOpen(skill.slug)
+  }
+
+  const handleOpenKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleOpen()
+    }
+  }
 
   return (
-    <div className="group relative">
-      <button
-        type="button"
-        className={`flex ${CARD_SIZE} cursor-pointer items-center justify-center rounded-md border border-line bg-surface-2 text-[30px] font-medium text-ink transition-colors hover:bg-soft`}
-        title={title}
-        onClick={() => onOpen(skill.slug)}
+    <div className={`group flex ${CARD_WIDTH} flex-col items-center gap-1.5`}>
+      <div className="relative">
+        <Tooltip delay={300}>
+          <Tooltip.Trigger className="inline-flex">
+            <div
+              role="button"
+              tabIndex={0}
+              className={`flex ${CARD_ICON_SIZE} cursor-pointer items-center justify-center rounded-md border border-line bg-surface-2 text-3xl font-semibold leading-none text-ink transition-colors hover:bg-soft`}
+              aria-label={skill.name}
+              onClick={handleOpen}
+              onKeyDown={handleOpenKeyDown}
+            >
+              {skillInitial(skill.name)}
+            </div>
+          </Tooltip.Trigger>
+          <Tooltip.Content placement="top" showArrow>
+            {skill.name}
+          </Tooltip.Content>
+        </Tooltip>
+
+        {hasUpdate && onUpgrade ? (
+          <button
+            type="button"
+            className="absolute -bottom-1 -right-1 z-10 inline-flex size-5 cursor-pointer items-center justify-center rounded-full border border-line bg-[var(--flow-green)] text-white shadow-sm transition-colors hover:opacity-90"
+            aria-label={`Upgrade ${skill.name}`}
+            title="Update available"
+            onClick={(event) => {
+              event.stopPropagation()
+              onUpgrade(skill.slug)
+            }}
+          >
+            <RefreshIcon size={10} />
+          </button>
+        ) : null}
+
+        {!skill.builtin && onDelete ? (
+          <button
+            type="button"
+            className="absolute -right-1 -top-1 z-20 inline-flex size-6 cursor-pointer items-center justify-center rounded-full border border-line bg-surface text-[#ff6b6b] opacity-0 shadow-sm transition-all hover:bg-soft group-hover:opacity-100"
+            aria-label={`Delete ${skill.name}`}
+            title={`Delete ${skill.name}`}
+            onClick={(event) => {
+              event.stopPropagation()
+              onDelete(skill.slug)
+            }}
+          >
+            <TrashIcon size={10} />
+          </button>
+        ) : null}
+      </div>
+
+      <div
+        role="button"
+        tabIndex={0}
+        className="line-clamp-2 w-full cursor-pointer text-center text-[9px] font-medium leading-snug text-ink transition-colors hover:text-accent"
+        onClick={handleOpen}
+        onKeyDown={handleOpenKeyDown}
       >
-        {skillInitial(skill.name)}
-      </button>
-
-      {hasUpdate && onUpgrade ? (
-        <button
-          type="button"
-          className="absolute -bottom-1 -right-1 z-10 inline-flex size-5 cursor-pointer items-center justify-center rounded-full border border-line bg-[var(--flow-green)] text-white shadow-sm transition-colors hover:opacity-90"
-          aria-label={`Upgrade ${skill.name}`}
-          title="Update available"
-          onClick={(event) => {
-            event.stopPropagation()
-            onUpgrade(skill.slug)
-          }}
-        >
-          <RefreshIcon size={10} />
-        </button>
-      ) : null}
-
-      {!skill.builtin && onDelete ? (
-        <button
-          type="button"
-          className="absolute -right-1 -top-1 z-20 inline-flex size-4 cursor-pointer items-center justify-center rounded-full border border-line bg-surface text-[#ff6b6b] opacity-0 shadow-sm transition-all hover:bg-soft group-hover:opacity-100"
-          aria-label={`Delete ${skill.name}`}
-          title={`Delete ${skill.name}`}
-          onClick={(event) => {
-            event.stopPropagation()
-            onDelete(skill.slug)
-          }}
-        >
-          <TrashIcon size={8} />
-        </button>
-      ) : null}
+        {skill.name}
+      </div>
     </div>
   )
 }
@@ -82,23 +113,52 @@ function AddSkillCard({
   onAdd: () => void
   disabled: boolean
 }): React.JSX.Element {
+  const handleAdd = (): void => {
+    if (disabled) return
+    onAdd()
+  }
+
+  const handleAddKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (disabled) return
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onAdd()
+    }
+  }
+
   return (
-    <Tooltip delay={300}>
-      <Tooltip.Trigger className="inline-flex">
-        <button
-          type="button"
-          className={`flex ${CARD_SIZE} cursor-pointer items-center justify-center rounded-md border border-dashed border-line bg-transparent text-muted transition-colors hover:border-accent hover:bg-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-40`}
-          aria-label="Add skill"
-          disabled={disabled}
-          onClick={onAdd}
-        >
-          <PlusIcon size={16} />
-        </button>
-      </Tooltip.Trigger>
-      <Tooltip.Content placement="top" showArrow>
-        Add skill (folder or zip)
-      </Tooltip.Content>
-    </Tooltip>
+    <div className={`flex ${CARD_WIDTH} flex-col items-center gap-1.5`}>
+      <Tooltip delay={300}>
+        <Tooltip.Trigger className="inline-flex">
+          <div
+            role="button"
+            tabIndex={disabled ? -1 : 0}
+            aria-label="Add skill"
+            aria-disabled={disabled}
+            className={`flex ${CARD_ICON_SIZE} cursor-pointer items-center justify-center rounded-md border border-dashed border-line bg-transparent text-muted transition-colors hover:border-accent hover:bg-soft hover:text-ink aria-disabled:cursor-not-allowed aria-disabled:opacity-40`}
+            onClick={handleAdd}
+            onKeyDown={handleAddKeyDown}
+          >
+            <PlusIcon size={18} />
+          </div>
+        </Tooltip.Trigger>
+        <Tooltip.Content placement="top" showArrow>
+          Add skill (folder or zip)
+        </Tooltip.Content>
+      </Tooltip>
+
+      <div
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-label="Add skill"
+        aria-disabled={disabled}
+        className="line-clamp-2 w-full cursor-pointer text-center text-[9px] font-medium leading-snug text-ink transition-colors hover:text-accent aria-disabled:cursor-not-allowed aria-disabled:opacity-40"
+        onClick={handleAdd}
+        onKeyDown={handleAddKeyDown}
+      >
+        New
+      </div>
+    </div>
   )
 }
 
@@ -109,23 +169,52 @@ function BrowseSkillCard({
   onBrowse: () => void
   disabled: boolean
 }): React.JSX.Element {
+  const handleBrowse = (): void => {
+    if (disabled) return
+    onBrowse()
+  }
+
+  const handleBrowseKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (disabled) return
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onBrowse()
+    }
+  }
+
   return (
-    <Tooltip delay={300}>
-      <Tooltip.Trigger className="inline-flex">
-        <button
-          type="button"
-          className={`flex ${CARD_SIZE} cursor-pointer items-center justify-center rounded-md border border-dashed border-line bg-transparent text-muted transition-colors hover:border-accent hover:bg-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-40`}
-          aria-label="SkillHub"
-          disabled={disabled}
-          onClick={onBrowse}
-        >
-          <DownloadIcon size={16} />
-        </button>
-      </Tooltip.Trigger>
-      <Tooltip.Content placement="top" showArrow>
+    <div className={`flex ${CARD_WIDTH} flex-col items-center gap-1.5`}>
+      <Tooltip delay={300}>
+        <Tooltip.Trigger className="inline-flex">
+          <div
+            role="button"
+            tabIndex={disabled ? -1 : 0}
+            aria-label="SkillHub"
+            aria-disabled={disabled}
+            className={`flex ${CARD_ICON_SIZE} cursor-pointer items-center justify-center rounded-md border border-dashed border-line bg-transparent text-muted transition-colors hover:border-accent hover:bg-soft hover:text-ink aria-disabled:cursor-not-allowed aria-disabled:opacity-40`}
+            onClick={handleBrowse}
+            onKeyDown={handleBrowseKeyDown}
+          >
+            <DownloadIcon size={18} />
+          </div>
+        </Tooltip.Trigger>
+        <Tooltip.Content placement="top" showArrow>
+          SkillHub
+        </Tooltip.Content>
+      </Tooltip>
+
+      <div
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-label="SkillHub"
+        aria-disabled={disabled}
+        className="line-clamp-2 w-full cursor-pointer text-center text-[9px] font-medium leading-snug text-ink transition-colors hover:text-accent aria-disabled:cursor-not-allowed aria-disabled:opacity-40"
+        onClick={handleBrowse}
+        onKeyDown={handleBrowseKeyDown}
+      >
         SkillHub
-      </Tooltip.Content>
-    </Tooltip>
+      </div>
+    </div>
   )
 }
 
@@ -230,7 +319,7 @@ export default function SkillTab(): React.JSX.Element {
   return (
     <>
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2 p-3.5">
           {skills.map((skill) => (
             <SkillCard
               key={skill.slug}
