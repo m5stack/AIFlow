@@ -88,6 +88,31 @@ const safeJsonParse = <T>(raw: string, fallback: T): T => {
   }
 }
 
+const writeFileAtomic = async (filePath: string, data: string | Buffer): Promise<void> => {
+  const tempPath = `${filePath}.tmp`
+  await writeFile(tempPath, data)
+  await rename(tempPath, filePath)
+}
+
+const isMissingFileError = (error: unknown): boolean =>
+  typeof error === 'object' &&
+  error !== null &&
+  'code' in error &&
+  (error as NodeJS.ErrnoException).code === 'ENOENT'
+
+const isValidManifest = (value: unknown): value is ProjectManifest => {
+  if (!value || typeof value !== 'object') return false
+  const manifest = value as Partial<ProjectManifest>
+  return (
+    typeof manifest.id === 'string' &&
+    typeof manifest.projectName === 'string' &&
+    typeof manifest.rootPath === 'string' &&
+    typeof manifest.language === 'string' &&
+    typeof manifest.createdAt === 'string' &&
+    typeof manifest.updatedAt === 'string'
+  )
+}
+
 const isPathInside = (basePath: string, candidatePath: string): boolean => {
   const rel = relative(basePath, candidatePath)
   return rel === '' || (!!rel && !rel.startsWith('..') && !isAbsolute(rel))
@@ -113,6 +138,7 @@ export { DEVICE_RESOURCE_RULES_CRITICAL }
 export class ProjectService {
   private readonly projectsDir: string
   private readonly indexPath: string
+  private readonly projectLocks = new Map<string, Promise<unknown>>()
 
   constructor(
     projectsDir = join(app.getPath('userData'), PROJECTS_DIR_NAME),
@@ -212,13 +238,13 @@ export class ProjectService {
         id
       )
 
-      const manifest = await this.readManifest(project.id)
-      manifest.language = typeof legacy.language === 'string' ? legacy.language : DEFAULT_LANGUAGE
-      manifest.createdAt =
-        typeof legacy.createdAt === 'string' ? legacy.createdAt : manifest.createdAt
-      manifest.updatedAt =
-        typeof legacy.updatedAt === 'string' ? legacy.updatedAt : manifest.updatedAt
-      await this.writeManifest(manifest)
+      await this.updateManifest(project.id, (manifest) => {
+        manifest.language = typeof legacy.language === 'string' ? legacy.language : DEFAULT_LANGUAGE
+        manifest.createdAt =
+          typeof legacy.createdAt === 'string' ? legacy.createdAt : manifest.createdAt
+        manifest.updatedAt =
+          typeof legacy.updatedAt === 'string' ? legacy.updatedAt : manifest.updatedAt
+      })
 
       if (Array.isArray(legacy.conversations) && legacy.conversations.length > 0) {
         await rm(this.chatsRoot(project.id), { recursive: true, force: true })
@@ -246,10 +272,10 @@ export class ProjectService {
     ) {
       throw new Error('Project name already exists.')
     }
-    const manifest = await this.readManifest(projectId)
-    manifest.projectName = safeName
-    manifest.updatedAt = nowIso()
-    await this.writeManifest(manifest)
+    await this.updateManifest(projectId, (manifest) => {
+      manifest.projectName = safeName
+      manifest.updatedAt = nowIso()
+    })
     return this.readProject(projectId)
   }
 
@@ -337,11 +363,11 @@ export class ProjectService {
     const absPath = this.resolveProjectFile(projectId, filePath)
     await mkdir(dirname(absPath), { recursive: true })
     await writeFile(absPath, content, 'utf8')
-    const manifest = await this.readManifest(projectId)
-    manifest.activeFilePath = this.toProjectRelativePath(projectId, absPath)
-    manifest.language = languageForPath(absPath, manifest.language)
-    manifest.updatedAt = nowIso()
-    await this.writeManifest(manifest)
+    await this.updateManifest(projectId, (manifest) => {
+      manifest.activeFilePath = this.toProjectRelativePath(projectId, absPath)
+      manifest.language = languageForPath(absPath, manifest.language)
+      manifest.updatedAt = nowIso()
+    })
   }
 
   async createFile(projectId: string, filePath: string, content = ''): Promise<ProjectFileNode[]> {
@@ -357,10 +383,10 @@ export class ProjectService {
     const absPath = this.resolveProjectFile(projectId, filePath)
     await mkdir(dirname(absPath), { recursive: true })
     await writeFile(absPath, Buffer.from(base64Data, 'base64'))
-    const manifest = await this.readManifest(projectId)
-    manifest.activeFilePath = this.toProjectRelativePath(projectId, absPath)
-    manifest.updatedAt = nowIso()
-    await this.writeManifest(manifest)
+    await this.updateManifest(projectId, (manifest) => {
+      manifest.activeFilePath = this.toProjectRelativePath(projectId, absPath)
+      manifest.updatedAt = nowIso()
+    })
     return this.listFiles(projectId)
   }
 
@@ -376,10 +402,10 @@ export class ProjectService {
   async deleteFile(projectId: string, filePath: string): Promise<ProjectFileNode[]> {
     const absPath = this.resolveProjectFile(projectId, filePath)
     await rm(absPath, { recursive: true, force: true })
-    const manifest = await this.readManifest(projectId)
-    if (manifest.activeFilePath === filePath) manifest.activeFilePath = DEFAULT_FILE_NAME
-    manifest.updatedAt = nowIso()
-    await this.writeManifest(manifest)
+    await this.updateManifest(projectId, (manifest) => {
+      if (manifest.activeFilePath === filePath) manifest.activeFilePath = DEFAULT_FILE_NAME
+      manifest.updatedAt = nowIso()
+    })
     return this.listFiles(projectId)
   }
 
@@ -565,10 +591,10 @@ export class ProjectService {
   }
 
   async setActiveDevice(projectId: string, deviceId?: string): Promise<ProjectItem> {
-    const manifest = await this.readManifest(projectId)
-    manifest.activeDeviceId = deviceId
-    manifest.updatedAt = nowIso()
-    await this.writeManifest(manifest)
+    await this.updateManifest(projectId, (manifest) => {
+      manifest.activeDeviceId = deviceId
+      manifest.updatedAt = nowIso()
+    })
     return this.readProject(projectId)
   }
 
@@ -799,33 +825,100 @@ export class ProjectService {
     conversation: ProjectConversation
   ): Promise<void> {
     await mkdir(this.chatsRoot(projectId), { recursive: true })
-    await writeFile(
+    await writeFileAtomic(
       this.conversationPath(projectId, conversation.id),
-      JSON.stringify(conversation, null, 2),
-      'utf8'
+      JSON.stringify(conversation, null, 2)
     )
+  }
+
+  private withProjectLock<T>(projectId: string, task: () => Promise<T>): Promise<T> {
+    const previous = this.projectLocks.get(projectId) ?? Promise.resolve()
+    const current = previous.catch(() => undefined).then(task)
+    this.projectLocks.set(projectId, current)
+    return current.finally(() => {
+      if (this.projectLocks.get(projectId) === current) {
+        this.projectLocks.delete(projectId)
+      }
+    })
+  }
+
+  private manifestPath(projectId: string): string {
+    return join(this.projectRoot(projectId), MANIFEST_FILE_NAME)
+  }
+
+  private buildRecoveredManifest(projectId: string, raw?: string): ProjectManifest {
+    const id = normalizeProjectId(projectId)
+    const partial = raw ? safeJsonParse<Partial<ProjectManifest>>(raw, {}) : {}
+    const timestamp = nowIso()
+    const rootPath = this.projectRoot(id)
+    return {
+      id,
+      projectName:
+        typeof partial.projectName === 'string' && partial.projectName.trim()
+          ? partial.projectName.trim()
+          : id,
+      rootPath: typeof partial.rootPath === 'string' ? partial.rootPath : rootPath,
+      activeDeviceId:
+        typeof partial.activeDeviceId === 'string' && partial.activeDeviceId
+          ? partial.activeDeviceId
+          : undefined,
+      language: typeof partial.language === 'string' ? partial.language : DEFAULT_LANGUAGE,
+      activeFilePath:
+        typeof partial.activeFilePath === 'string' ? partial.activeFilePath : DEFAULT_FILE_NAME,
+      createdAt: typeof partial.createdAt === 'string' ? partial.createdAt : timestamp,
+      updatedAt: timestamp
+    }
+  }
+
+  private async readManifestUnlocked(projectId: string): Promise<ProjectManifest> {
+    const path = this.manifestPath(projectId)
+    let raw: string
+    try {
+      raw = await readFile(path, 'utf8')
+    } catch (error) {
+      if (isMissingFileError(error)) throw error
+      const recovered = this.buildRecoveredManifest(projectId)
+      await this.writeManifestUnlocked(recovered)
+      return recovered
+    }
+
+    const manifest = safeJsonParse<unknown>(raw, null)
+    if (isValidManifest(manifest)) return manifest
+
+    const recovered = this.buildRecoveredManifest(projectId, raw)
+    await this.writeManifestUnlocked(recovered)
+    return recovered
+  }
+
+  private async writeManifestUnlocked(manifest: ProjectManifest): Promise<void> {
+    await mkdir(this.projectRoot(manifest.id), { recursive: true })
+    await writeFileAtomic(this.manifestPath(manifest.id), JSON.stringify(manifest, null, 2))
   }
 
   private async readManifest(projectId: string): Promise<ProjectManifest> {
-    const raw = await readFile(join(this.projectRoot(projectId), MANIFEST_FILE_NAME), 'utf8')
-    const manifest = safeJsonParse<ProjectManifest | null>(raw, null)
-    if (!manifest) throw new Error('Project manifest is invalid.')
-    return manifest
+    return this.withProjectLock(projectId, () => this.readManifestUnlocked(projectId))
   }
 
   private async writeManifest(manifest: ProjectManifest): Promise<void> {
-    await mkdir(this.projectRoot(manifest.id), { recursive: true })
-    await writeFile(
-      join(this.projectRoot(manifest.id), MANIFEST_FILE_NAME),
-      JSON.stringify(manifest, null, 2),
-      'utf8'
-    )
+    return this.withProjectLock(manifest.id, () => this.writeManifestUnlocked(manifest))
+  }
+
+  private async updateManifest(
+    projectId: string,
+    updater: (manifest: ProjectManifest) => void
+  ): Promise<ProjectManifest> {
+    return this.withProjectLock(projectId, async () => {
+      const manifest = await this.readManifestUnlocked(projectId)
+      updater(manifest)
+      await this.writeManifestUnlocked(manifest)
+      return manifest
+    })
   }
 
   private async touchProject(projectId: string): Promise<void> {
-    const manifest = await this.readManifest(projectId)
-    manifest.updatedAt = nowIso()
-    await this.writeManifest(manifest)
+    await this.updateManifest(projectId, (manifest) => {
+      manifest.updatedAt = nowIso()
+    })
   }
 
   private async readIndex(): Promise<ProjectIndex> {
@@ -837,7 +930,7 @@ export class ProjectService {
 
   private async writeIndex(index: ProjectIndex): Promise<void> {
     await mkdir(this.projectsDir, { recursive: true })
-    await writeFile(this.indexPath, JSON.stringify(index, null, 2), 'utf8')
+    await writeFileAtomic(this.indexPath, JSON.stringify(index, null, 2))
   }
 
   private async prependProjectToIndex(projectId: string): Promise<void> {
