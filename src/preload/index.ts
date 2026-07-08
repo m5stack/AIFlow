@@ -27,6 +27,7 @@ import type {
   SkillItem,
   McpServerItem,
   CreateMcpServerPayload,
+  UpdateMcpServerPayload,
   UserModelConfig,
   UpdateUserModelConfigPayload,
   TokenUsageStats
@@ -258,6 +259,9 @@ const ipc: IpcAPI = {
     },
     create(payload: CreateMcpServerPayload): Promise<McpServerItem[]> {
       return ipcRenderer.invoke('mcp:create', payload)
+    },
+    update(payload: UpdateMcpServerPayload): Promise<McpServerItem[]> {
+      return ipcRenderer.invoke('mcp:update', payload)
     },
     delete(serverId: string): Promise<McpServerItem[]> {
       return ipcRenderer.invoke('mcp:delete', serverId)

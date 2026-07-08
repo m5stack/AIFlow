@@ -25,6 +25,7 @@ import type {
   SkillItem,
   McpServerItem,
   CreateMcpServerPayload,
+  UpdateMcpServerPayload,
   UserModelConfig,
   UpdateUserModelConfigPayload,
   TokenUsageStats
@@ -123,6 +124,7 @@ export interface SkillAPI {
 export interface McpAPI {
   list(): Promise<McpServerItem[]>
   create(payload: CreateMcpServerPayload): Promise<McpServerItem[]>
+  update(payload: UpdateMcpServerPayload): Promise<McpServerItem[]>
   delete(serverId: string): Promise<McpServerItem[]>
 }
 

@@ -2,7 +2,13 @@ import { app } from 'electron'
 import { randomUUID } from 'crypto'
 import { mkdir, readFile, writeFile } from 'fs/promises'
 import { dirname, join } from 'path'
-import type { CreateMcpServerPayload, McpServerItem } from '../../shared/types'
+import {
+  MCP_SERVER_NAME_ERROR,
+  MCP_SERVER_NAME_PATTERN,
+  type CreateMcpServerPayload,
+  type McpServerItem,
+  type UpdateMcpServerPayload
+} from '../../shared/types'
 
 type McpServerConfigFile = {
   servers: McpServerItem[]
@@ -36,7 +42,13 @@ const safeJsonParse = <T>(raw: string, fallback: T): T => {
   }
 }
 
-const normalizeName = (name: string): string => name.trim()
+const normalizeName = (name: string): string => {
+  const trimmed = name.trim()
+  if (trimmed && !MCP_SERVER_NAME_PATTERN.test(trimmed)) {
+    throw new Error(MCP_SERVER_NAME_ERROR)
+  }
+  return trimmed
+}
 
 const normalizeArgs = (args?: string[]): string[] | undefined => {
   if (!args?.length) return undefined
@@ -108,6 +120,46 @@ export class McpService {
     }
 
     await this.persistServers([...servers, server])
+    return this.listServers()
+  }
+
+  async updateServer(payload: UpdateMcpServerPayload): Promise<McpServerItem[]> {
+    const name = normalizeName(payload.name)
+    if (!name) throw new Error('Server name cannot be empty.')
+
+    const servers = await this.loadServers()
+    const index = servers.findIndex((server) => server.id === payload.id)
+    if (index === -1) throw new Error('MCP server not found.')
+
+    if (servers.some((server) => server.name === name && server.id !== payload.id)) {
+      throw new Error(`MCP server "${name}" already exists.`)
+    }
+
+    const existing = servers[index]
+    const updated: McpServerItem = {
+      id: existing.id,
+      name,
+      transport: payload.transport,
+      createdAt: existing.createdAt,
+      updatedAt: nowIso()
+    }
+
+    if (payload.transport === 'stdio') {
+      const command = payload.command?.trim()
+      if (!command) throw new Error('Command is required for stdio MCP servers.')
+      updated.command = command
+      updated.args = normalizeArgs(payload.args)
+      updated.env = normalizeStringMap(payload.env)
+    } else {
+      const url = payload.url?.trim()
+      if (!url) throw new Error('URL is required for remote MCP servers.')
+      updated.url = url
+      updated.headers = normalizeStringMap(payload.headers)
+    }
+
+    const nextServers = [...servers]
+    nextServers[index] = updated
+    await this.persistServers(nextServers)
     return this.listServers()
   }
 

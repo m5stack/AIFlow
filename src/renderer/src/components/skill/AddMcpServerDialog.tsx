@@ -19,7 +19,13 @@ import {
   TextArea,
   TextField
 } from '@heroui/react'
-import type { CreateMcpServerPayload, McpServerItem, McpTransport } from '../../../../shared/types'
+import {
+  MCP_SERVER_NAME_ERROR,
+  MCP_SERVER_NAME_PATTERN,
+  type CreateMcpServerPayload,
+  type McpServerItem,
+  type McpTransport
+} from '../../../../shared/types'
 
 const TRANSPORT_OPTIONS: { id: McpTransport; label: string }[] = [
   { id: 'stdio', label: 'stdio' },
@@ -62,12 +68,14 @@ interface AddMcpServerDialogProps {
   isOpen: boolean
   onClose: () => void
   onAdded: (servers: McpServerItem[]) => void
+  server?: McpServerItem
 }
 
 export default function AddMcpServerDialog({
   isOpen,
   onClose,
-  onAdded
+  onAdded,
+  server
 }: AddMcpServerDialogProps): React.JSX.Element {
   const [name, setName] = useState('')
   const [transport, setTransport] = useState<McpTransport>('http')
@@ -78,6 +86,7 @@ export default function AddMcpServerDialog({
   const [headers, setHeaders] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const isEditing = Boolean(server)
 
   const resetForm = (): void => {
     setName('')
@@ -91,14 +100,33 @@ export default function AddMcpServerDialog({
   }
 
   useEffect(() => {
-    if (!isOpen) resetForm()
-  }, [isOpen])
+    if (!isOpen) {
+      resetForm()
+      return
+    }
+
+    if (server) {
+      setName(server.name)
+      setTransport(server.transport)
+      setCommand(server.command ?? '')
+      setArgs(server.args?.join(', ') ?? '')
+      setEnv(server.env ? JSON.stringify(server.env, null, 2) : '')
+      setUrl(server.url ?? '')
+      setHeaders(server.headers ? JSON.stringify(server.headers, null, 2) : '')
+      setFormError(null)
+    } else {
+      resetForm()
+    }
+  }, [isOpen, server])
+
+  const isAsciiName = useMemo(() => MCP_SERVER_NAME_PATTERN.test(name), [name])
 
   const canSubmit = useMemo(() => {
     if (!name.trim()) return false
+    if (!isAsciiName) return false
     if (transport === 'stdio') return Boolean(command.trim())
     return Boolean(url.trim())
-  }, [command, name, transport, url])
+  }, [command, isAsciiName, name, transport, url])
 
   const handleClose = (): void => {
     if (isSaving) return
@@ -126,11 +154,19 @@ export default function AddMcpServerDialog({
         payload.headers = parseStringMap(headers, 'Headers')
       }
 
-      const nextServers = await window.ipc.mcp.create(payload)
+      const nextServers = isEditing
+        ? await window.ipc.mcp.update({ ...payload, id: server!.id })
+        : await window.ipc.mcp.create(payload)
       onAdded(nextServers)
       handleClose()
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to add MCP server')
+      setFormError(
+        err instanceof Error
+          ? err.message
+          : isEditing
+            ? 'Failed to update MCP server'
+            : 'Failed to add MCP server'
+      )
     } finally {
       setIsSaving(false)
     }
@@ -154,7 +190,9 @@ export default function AddMcpServerDialog({
           <ModalDialog>
             <Modal.CloseTrigger />
             <ModalHeader>
-              <ModalHeading className="text-lg">Add MCP Server</ModalHeading>
+              <ModalHeading className="text-lg">
+                {isEditing ? 'Edit MCP Server' : 'Add MCP Server'}
+              </ModalHeading>
             </ModalHeader>
 
             <ModalBody className="flex flex-col gap-3 p-2">
@@ -170,6 +208,9 @@ export default function AddMcpServerDialog({
                   disabled={isSaving}
                   variant="secondary"
                 />
+                {name && !isAsciiName ? (
+                  <p className="text-[11px] text-[#ff6b6b]">{MCP_SERVER_NAME_ERROR}</p>
+                ) : null}
               </TextField>
 
               <div className="flex flex-col gap-1.5">
@@ -284,7 +325,7 @@ export default function AddMcpServerDialog({
                 isDisabled={!canSubmit || isSaving}
                 onClick={() => void handleSubmit()}
               >
-                {isSaving ? 'Adding…' : 'Add'}
+                {isSaving ? (isEditing ? 'Saving…' : 'Adding…') : isEditing ? 'Save' : 'Add'}
               </Button>
             </ModalFooter>
           </ModalDialog>

@@ -274,6 +274,12 @@ export interface SkillItem {
 
 export type McpTransport = 'stdio' | 'sse' | 'http'
 
+/** Printable ASCII: English letters, numbers, spaces, and common symbols. */
+export const MCP_SERVER_NAME_PATTERN = /^[\x20-\x7E]+$/
+
+export const MCP_SERVER_NAME_ERROR =
+  'Server name can only contain a-z, A-Z, 0-9, spaces, and common symbols (e.g. - _ . / : @).'
+
 export interface McpServerItem {
   id: string
   name: string
@@ -295,4 +301,8 @@ export interface CreateMcpServerPayload {
   env?: Record<string, string>
   url?: string
   headers?: Record<string, string>
+}
+
+export interface UpdateMcpServerPayload extends CreateMcpServerPayload {
+  id: string
 }
