@@ -40,7 +40,7 @@ async function createWindow(
     height: 900,
     minWidth: WINDOW_MIN_WIDTH,
     minHeight: WINDOW_MIN_HEIGHT,
-    show: false,
+    show: true,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
@@ -70,7 +70,6 @@ async function createWindow(
     if (width < BASE_DESIGN_WIDTH || height < BASE_DESIGN_HEIGHT) {
       mainWindow.maximize()
     }
-    mainWindow.show()
     applyZoom()
   })
 

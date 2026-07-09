@@ -18,6 +18,7 @@
     "build:unpack": "npm run build && node scripts/prepare-claude-binary.js darwin arm64 && electron-builder --dir",
     "build:mac": "npm run build && node scripts/prepare-claude-binary.js darwin arm64 && electron-builder --mac --arm64",
     "build:win": "npm run build && node scripts/prepare-claude-binary.js win32 x64 && electron-builder --win --x64",
+    "build:linux": "npm run build && node scripts/prepare-claude-binary.js linux x64 && electron-builder --linux --x64",
     "icons:mac": "node scripts/round-mac-icon.mjs",
     "icons:win": "node scripts/generate-win-icon.mjs"
   },
@@ -28,6 +29,7 @@
     "@heroui/react": "^3.0.4",
     "@heroui/styles": "^3.0.4",
     "@monaco-editor/react": "^4.7.0",
+    "@rollup/rollup-linux-x64-gnu": "^4.62.2",
     "@tailwindcss/vite": "^4.3.0",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
@@ -46,7 +48,8 @@
     "@anthropic-ai/claude-agent-sdk-darwin-arm64": "0.3.146",
     "@anthropic-ai/claude-agent-sdk-darwin-x64": "^0.3.146",
     "@anthropic-ai/claude-agent-sdk-linux-x64": "0.3.146",
-    "@anthropic-ai/claude-agent-sdk-win32-x64": "^0.3.146"
+    "@anthropic-ai/claude-agent-sdk-win32-x64": "^0.3.146",
+    "@rollup/rollup-win32-x64-msvc": "4.60.3"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
