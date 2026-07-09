@@ -23,7 +23,7 @@ export default function PanelShell({
     <section
       className={`flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-surface/95 shadow-[var(--panel-shadow)] ${className}`}
     >
-      <header className="flex h-10 shrink-0 items-stretch justify-between gap-3 border-b border-line bg-surface-2 px-4">
+      <header className="flex h-10 shrink-0 items-stretch justify-between gap-3 border-b border-line bg-surface-2 px-2">
         <div className="flex min-w-0 flex-1 items-stretch gap-2">
           {icon && (
             <span

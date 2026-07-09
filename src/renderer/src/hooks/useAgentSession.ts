@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { toast } from '@heroui/react'
 import { createUserChatMessage, flushPendingProjectFileWrite, useProjectStore } from '../stores/projectStore'
 import { useFlowStatusStore } from '../stores/flowStatusStore'
+import { useSessionTokenUsageStore } from '../stores/sessionTokenUsageStore'
 import { useDeviceStore } from '../stores/deviceStore'
 import { useOnboardingStore } from '../stores/onboardingStore'
 import { groupMessagesIntoTurns, mergeAssistantParts } from '../utils/conversation/chatTurns'
@@ -143,6 +144,9 @@ export function useAgentSession() {
     const offTurnComplete = window.ipc.agent.onTurnComplete((event) => {
       const userMessageId = thinkingMetaRef.current[event.convId]?.turnId
       finishThinkingTurn(event.projectId, event.convId)
+      if (event.tokenUsage) {
+        useSessionTokenUsageStore.getState().addUsage(event.tokenUsage)
+      }
       if (userMessageId && event.tokenUsage) {
         applyTurnTokenUsage(event.projectId, event.convId, userMessageId, event.tokenUsage)
       }

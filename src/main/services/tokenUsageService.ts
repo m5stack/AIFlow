@@ -147,10 +147,12 @@ export class TokenUsageService {
       const dailyModel = daily.byModel[model] ?? {
         inputTokens: 0,
         outputTokens: 0,
+        cacheTokens: 0,
         totalTokens: 0
       }
       dailyModel.inputTokens += record.inputTokens
       dailyModel.outputTokens += record.outputTokens
+      dailyModel.cacheTokens += cacheTokens
       dailyModel.totalTokens += totalTokens
       daily.byModel[model] = dailyModel
       dailyMap.set(dateKey, daily)

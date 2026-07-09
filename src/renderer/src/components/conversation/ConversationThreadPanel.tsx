@@ -7,6 +7,7 @@ import ConversationComposer from './ConversationComposer'
 import PanelShell from '../layout/PanelShell'
 import ConversationTabs from './ConversationTabs'
 import ConversationTurnMeta from './ConversationTurnMeta'
+import SessionTokenBadge from './SessionTokenBadge'
 import { useChatAutoScroll } from '../../hooks/useChatAutoScroll'
 import type { AgentSession } from '../../hooks/useAgentSession'
 
@@ -46,6 +47,7 @@ export default function ConversationThreadPanel({
     <PanelShell
       title="Conversation"
       icon={<ChatBubbleIcon size={16} />}
+      actions={<SessionTokenBadge />}
       bodyClassName="flex flex-col gap-3 overflow-hidden"
     >
       <div className="flex shrink-0 items-center gap-2 border-b border-line p-2">

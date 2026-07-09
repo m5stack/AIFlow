@@ -34,6 +34,7 @@ export interface TokenUsageModelStat {
 export interface TokenUsageDailyModelStat {
   inputTokens: number
   outputTokens: number
+  cacheTokens: number
   totalTokens: number
 }
 

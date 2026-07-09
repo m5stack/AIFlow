@@ -20,6 +20,7 @@ import {
   XAxis,
   YAxis
 } from 'recharts'
+import type { TooltipContentProps, TooltipProps } from 'recharts'
 import type { TokenUsageStats } from '../../types/project'
 import { formatTokenCount } from '../../utils/conversation/formatTokenUsage'
 
@@ -31,6 +32,7 @@ interface TokenUsageDashboardDialogProps {
 type ChartColors = {
   input: string
   output: string
+  cache: string
   grid: string
   muted: string
   cursor: string
@@ -61,6 +63,7 @@ const formatDayLabel = (dateKey: string): string => {
 const readChartColors = (): ChartColors => ({
   input: readCssVar('--flow-blue', '#0ea5d4'),
   output: readCssVar('--flow-green', '#16a34a'),
+  cache: readCssVar('--flow-violet', '#7c3aed'),
   grid: readCssVar('--line', '#d8e0ea'),
   muted: readCssVar('--muted', '#5c6b7f'),
   cursor: readCssVar('--ink', '#0f1724')
@@ -71,8 +74,10 @@ const chartValue = (count: number): number | null => (count > 0 ? count : null)
 type TokenChartRow = {
   input: number | null
   output: number | null
+  cache: number | null
   inputTokens: number
   outputTokens: number
+  cacheTokens: number
   name?: string
   date?: string
 }
@@ -89,14 +94,10 @@ function TokenChartTooltip({
   active,
   label,
   payload
-}: {
-  active?: boolean
-  label?: string | number
-  payload?: Array<{ payload?: TokenChartRow }>
-}): React.JSX.Element | null {
-  if (!active || !payload?.length) return null
+}: TooltipContentProps): React.JSX.Element | null {
+  if (!active || !payload.length) return null
 
-  const row = payload[0]?.payload
+  const row = payload[0]?.payload as TokenChartRow | undefined
   if (!row) return null
 
   return (
@@ -104,6 +105,7 @@ function TokenChartTooltip({
       {label ? <div className="mb-1 font-medium text-ink">{label}</div> : null}
       <div className="text-muted">Input: {formatTokenCount(row.inputTokens)}</div>
       <div className="text-muted">Output: {formatTokenCount(row.outputTokens)}</div>
+      <div className="text-muted">Cache: {formatTokenCount(row.cacheTokens)}</div>
     </div>
   )
 }
@@ -150,8 +152,10 @@ export default function TokenUsageDashboardDialog({
         name: item.label,
         input: chartValue(item.inputTokens),
         output: chartValue(item.outputTokens),
+        cache: chartValue(item.cacheTokens),
         inputTokens: item.inputTokens,
-        outputTokens: item.outputTokens
+        outputTokens: item.outputTokens,
+        cacheTokens: item.cacheTokens
       })),
     [stats.byModel]
   )
@@ -161,29 +165,37 @@ export default function TokenUsageDashboardDialog({
       stats.daily.map((day) => {
         let inputTokens = 0
         let outputTokens = 0
+        let cacheTokens = 0
         for (const modelStat of Object.values(day.byModel)) {
           inputTokens += modelStat.inputTokens
           outputTokens += modelStat.outputTokens
+          cacheTokens += modelStat.cacheTokens
         }
         return {
           date: formatDayLabel(day.date),
           input: chartValue(inputTokens),
           output: chartValue(outputTokens),
+          cache: chartValue(cacheTokens),
           inputTokens,
-          outputTokens
+          outputTokens,
+          cacheTokens
         }
       }),
     [stats.daily]
   )
 
   const hasData = stats.byModel.length > 0
-  const chartTooltipProps = {
-    content: (props: {
-      active?: boolean
-      label?: string | number
-      payload?: Array<{ payload?: TokenChartRow }>
-    }) => <TokenChartTooltip {...props} />,
+  const chartTooltipProps: Pick<TooltipProps, 'content' | 'cursor'> = {
+    content: TokenChartTooltip,
     cursor: { fill: chartColors.cursor, fillOpacity: 0.1 }
+  }
+  const chartLegendProps = {
+    wrapperStyle: { fontSize: 12 },
+    payload: [
+      { value: 'Input', type: 'square' as const, color: chartColors.input, id: 'input' },
+      { value: 'Output', type: 'square' as const, color: chartColors.output, id: 'output' },
+      { value: 'Cache', type: 'square' as const, color: chartColors.cache, id: 'cache' }
+    ]
   }
 
   return (
@@ -224,12 +236,12 @@ export default function TokenUsageDashboardDialog({
               ) : (
                 <>
                   <div className="grid grid-cols-3 gap-2">
-                    <SummaryCard label="Total tokens" value={formatTokenCount(summary.totalTokens)} />
                     <SummaryCard
-                      label="Active models"
-                      value={String(summary.activeModels)}
+                      label="Total tokens"
+                      value={formatTokenCount(summary.totalTokens)}
                     />
-                    <SummaryCard label="Turns" value={String(summary.totalTurns)} />
+                    <SummaryCard label="Active models" value={String(summary.activeModels)} />
+                    <SummaryCard label="Requests" value={String(summary.totalTurns)} />
                   </div>
 
                   <section className="flex flex-col gap-2">
@@ -242,7 +254,11 @@ export default function TokenUsageDashboardDialog({
                           barCategoryGap="20%"
                           barGap={4}
                         >
-                          <CartesianGrid stroke={chartColors.grid} strokeDasharray="3 3" vertical={false} />
+                          <CartesianGrid
+                            stroke={chartColors.grid}
+                            strokeDasharray="3 3"
+                            vertical={false}
+                          />
                           <XAxis
                             dataKey="name"
                             tick={{ fill: chartColors.muted, fontSize: 11 }}
@@ -258,18 +274,27 @@ export default function TokenUsageDashboardDialog({
                             tickFormatter={(value: number) => formatTokenCount(value)}
                           />
                           <Tooltip {...chartTooltipProps} />
-                          <Legend wrapperStyle={{ fontSize: 12 }} />
+                          <Legend {...chartLegendProps} />
                           <Bar
                             dataKey="input"
                             name="Input"
                             fill={chartColors.input}
                             radius={[4, 4, 0, 0]}
+                            minPointSize={3}
                           />
                           <Bar
                             dataKey="output"
                             name="Output"
                             fill={chartColors.output}
                             radius={[4, 4, 0, 0]}
+                            minPointSize={3}
+                          />
+                          <Bar
+                            dataKey="cache"
+                            name="Cache"
+                            fill={chartColors.cache}
+                            radius={[4, 4, 0, 0]}
+                            minPointSize={3}
                           />
                         </BarChart>
                       </ResponsiveContainer>
@@ -286,7 +311,11 @@ export default function TokenUsageDashboardDialog({
                           barCategoryGap="20%"
                           barGap={4}
                         >
-                          <CartesianGrid stroke={chartColors.grid} strokeDasharray="3 3" vertical={false} />
+                          <CartesianGrid
+                            stroke={chartColors.grid}
+                            strokeDasharray="3 3"
+                            vertical={false}
+                          />
                           <XAxis
                             dataKey="date"
                             tick={{ fill: chartColors.muted, fontSize: 11 }}
@@ -301,18 +330,27 @@ export default function TokenUsageDashboardDialog({
                             tickFormatter={(value: number) => formatTokenCount(value)}
                           />
                           <Tooltip {...chartTooltipProps} />
-                          <Legend wrapperStyle={{ fontSize: 12 }} />
+                          <Legend {...chartLegendProps} />
                           <Bar
                             dataKey="input"
                             name="Input"
                             fill={chartColors.input}
                             radius={[4, 4, 0, 0]}
+                            minPointSize={3}
                           />
                           <Bar
                             dataKey="output"
                             name="Output"
                             fill={chartColors.output}
                             radius={[4, 4, 0, 0]}
+                            minPointSize={3}
+                          />
+                          <Bar
+                            dataKey="cache"
+                            name="Cache"
+                            fill={chartColors.cache}
+                            radius={[4, 4, 0, 0]}
+                            minPointSize={3}
                           />
                         </BarChart>
                       </ResponsiveContainer>
@@ -320,7 +358,7 @@ export default function TokenUsageDashboardDialog({
                   </section>
 
                   <section className="flex flex-col gap-2">
-                    <h3 className="text-[13px] font-semibold text-ink">Model breakdown</h3>
+                    <h3 className="text-[13px] font-semibold text-ink">Details</h3>
                     <div className="overflow-x-auto rounded-lg border border-line">
                       <table className="min-w-full border-collapse text-left text-[12px]">
                         <thead className="bg-surface-2 text-muted">
@@ -330,7 +368,7 @@ export default function TokenUsageDashboardDialog({
                             <th className="px-3 py-2 font-medium">Out</th>
                             <th className="px-3 py-2 font-medium">Cache</th>
                             <th className="px-3 py-2 font-medium">Total</th>
-                            <th className="px-3 py-2 font-medium">Turns</th>
+                            <th className="px-3 py-2 font-medium">Requests</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -342,9 +380,15 @@ export default function TokenUsageDashboardDialog({
                                   <div className="text-[11px] text-muted">{item.model}</div>
                                 ) : null}
                               </td>
-                              <td className="px-3 py-2 text-ink">{formatTokenCount(item.inputTokens)}</td>
-                              <td className="px-3 py-2 text-ink">{formatTokenCount(item.outputTokens)}</td>
-                              <td className="px-3 py-2 text-ink">{formatTokenCount(item.cacheTokens)}</td>
+                              <td className="px-3 py-2 text-ink">
+                                {formatTokenCount(item.inputTokens)}
+                              </td>
+                              <td className="px-3 py-2 text-ink">
+                                {formatTokenCount(item.outputTokens)}
+                              </td>
+                              <td className="px-3 py-2 text-ink">
+                                {formatTokenCount(item.cacheTokens)}
+                              </td>
                               <td className="px-3 py-2 font-medium text-ink">
                                 {formatTokenCount(item.totalTokens)}
                               </td>
