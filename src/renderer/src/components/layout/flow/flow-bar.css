@@ -205,6 +205,8 @@
   display: flex;
   align-items: stretch;
   gap: 6px;
+  width: 100%;
+  max-width: 666px;
   height: 60px;
   max-height: 60px;
   min-width: 0;
@@ -233,11 +235,11 @@
   align-self: stretch;
   justify-content: center;
   gap: 4px;
-  flex-shrink: 0;
-  width: 168px;
+  flex: 0 1 240px;
+  min-width: 168px;
+  max-width: 240px;
   height: 100%;
   max-height: 60px;
-  min-width: 0;
   padding: 0;
   box-sizing: border-box;
   overflow: hidden;
@@ -267,9 +269,6 @@
 
 .flow-device-run-download {
   background: linear-gradient(135deg, #263445 0%, #1a8fb5 100%);
-  color: #fff;
-  font-size: 10px;
-  letter-spacing: -0.02em;
 }
 
 .flow-device-run-flash {
@@ -340,9 +339,9 @@
   display: inline-flex;
   flex-direction: row;
   align-items: stretch;
-  width: min(280px, 100%);
-  max-width: 100%;
-  min-width: 0;
+  flex: 1 1 240px;
+  min-width: 180px;
+  max-width: 420px;
   height: 60px;
   border-radius: 10px;
   background: var(--flow-node-bg);

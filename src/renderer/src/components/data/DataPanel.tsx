@@ -18,14 +18,21 @@ export default function DataPanel(): React.JSX.Element {
   const headerIcon = activeTab === 'ezdata' ? <DatabaseIcon size={16} /> : <FolderIcon size={15} />
 
   return (
+    // <PanelShell
+    //   icon={headerIcon}
+    //   title={<PanelTabs tabs={TABS} activeId={activeTab} onChange={setActiveTab} />}
+    //   bodyClassName="flex min-h-0 flex-col overflow-hidden"
+    // >
+    //   <PanelTabPane key={activeTab} className="flex flex-col overflow-hidden">
+    //     {activeTab === 'ezdata' ? <EzDataTab /> : <DeviceFilesTab />}
+    //   </PanelTabPane>
+    // </PanelShell>
     <PanelShell
       icon={headerIcon}
-      title={<PanelTabs tabs={TABS} activeId={activeTab} onChange={setActiveTab} />}
+      title="Device Files"
       bodyClassName="flex min-h-0 flex-col overflow-hidden"
     >
-      <PanelTabPane key={activeTab} className="flex flex-col overflow-hidden">
-        {activeTab === 'ezdata' ? <EzDataTab /> : <DeviceFilesTab />}
-      </PanelTabPane>
+      <DeviceFilesTab />
     </PanelShell>
   )
 }
