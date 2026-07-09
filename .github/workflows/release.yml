@@ -35,6 +35,13 @@ jobs:
             artifact-paths: |
               dist/*.exe
               dist/*.zip
+          - name: Ubuntu x64
+            os: ubuntu-latest
+            build-script: build:linux
+            artifact-name: ubuntu-x64
+            artifact-paths: |
+              dist/*.deb
+              dist/*.AppImage
 
     steps:
       - name: Checkout

@@ -54,7 +54,8 @@ linux:
     - AppImage
     - snap
     - deb
-  maintainer: electronjs.org
+  icon: icons
+  maintainer: M5Stack <dev@m5stack.com>
   category: Utility
 appImage:
   artifactName: ${productName}-${version}.${ext}
