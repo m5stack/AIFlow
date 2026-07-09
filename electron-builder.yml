@@ -52,7 +52,6 @@ dmg:
 linux:
   target:
     - AppImage
-    - snap
     - deb
   icon: icons
   maintainer: M5Stack <dev@m5stack.com>

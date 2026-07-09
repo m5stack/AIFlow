@@ -59,6 +59,7 @@ jobs:
       - name: Build and package app
         run: npm run ${{ matrix.build-script }}
         env:
+          NODE_OPTIONS: --max-old-space-size=6144
           CSC_IDENTITY_AUTO_DISCOVERY: false
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
