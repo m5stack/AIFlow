@@ -15,6 +15,7 @@ import {
   FaEraser,
   FaFolder,
   FaGear,
+  FaImage,
   FaLightbulb,
   FaList,
   FaMobileScreen,
@@ -71,6 +72,7 @@ export const EditIcon = icon(FaPen)
 export const TrashIcon = icon(FaTrash)
 export const ChartIcon = icon(FaChartColumn)
 export const CodeIcon = icon(FaCode)
+export const ImageIcon = icon(FaImage)
 export const DeviceIcon = icon(FaMobileScreen)
 export const CheckIcon = icon(FaCheck)
 export const DatabaseIcon = icon(FaDatabase)

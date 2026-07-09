@@ -4,9 +4,12 @@ import { createUserChatMessage, flushPendingProjectFileWrite, useProjectStore } 
 import { useFlowStatusStore } from '../stores/flowStatusStore'
 import { useSessionTokenUsageStore } from '../stores/sessionTokenUsageStore'
 import { useDeviceStore } from '../stores/deviceStore'
+import { useDeviceFileTreeStore } from '../stores/deviceFileTreeStore'
 import { useOnboardingStore } from '../stores/onboardingStore'
+import { formatDeviceFileTree } from '../utils/device/formatDeviceFileTree'
 import { groupMessagesIntoTurns, mergeAssistantParts } from '../utils/conversation/chatTurns'
 import type {
+  AgentActiveDevice,
   CreateUserModelConfigPayload,
   UpdateUserModelConfigPayload,
   UserModelConfig
@@ -229,9 +232,21 @@ export function useAgentSession() {
     const poolDevice = useDeviceStore
       .getState()
       .devices.find((device) => device.id === activeDeviceId)
-    const activeDevice = poolDevice
+    let activeDevice: AgentActiveDevice | undefined = poolDevice
       ? { id: poolDevice.id, name: poolDevice.name, type: poolDevice.type }
       : undefined
+    if (poolDevice) {
+      const snapshot = useDeviceFileTreeStore.getState()
+      if (snapshot.deviceId === poolDevice.id && snapshot.tree) {
+        activeDevice = {
+          id: poolDevice.id,
+          name: poolDevice.name,
+          type: poolDevice.type,
+          fileTreeText: formatDeviceFileTree(snapshot.tree, snapshot.rootFsPath),
+          fileTreeRoot: snapshot.rootFsPath
+        }
+      }
+    }
     const userMsg = createUserChatMessage(content)
 
     filesChangedByConvIdRef.current[convId] = false

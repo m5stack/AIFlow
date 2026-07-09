@@ -68,12 +68,23 @@ const buildActiveDevicePrompt = (activeDevice?: AgentActiveDevice): string | und
   if (!activeDevice?.type) return undefined
 
   const normalizedType = normalizeDeviceTypeForPinMap(activeDevice.type)
-  return [
+  const lines = [
     'Currently selected device:',
     `Device name: ${activeDevice.name}`,
     `Device type: ${activeDevice.type}`,
     formatPinMapsForPrompt(normalizedType)
-  ].join('\n')
+  ]
+
+  if (activeDevice.fileTreeText) {
+    const root = activeDevice.fileTreeRoot ?? '/'
+    lines.push(
+      `Files currently on the device (root: ${root}):`,
+      activeDevice.fileTreeText,
+      'Treat this tree as the authoritative snapshot of files that exist on the device.'
+    )
+  }
+
+  return lines.filter(Boolean).join('\n')
 }
 
 const buildTurnPrompt = (userPrompt: string, turnPromptPrefix: string): string =>

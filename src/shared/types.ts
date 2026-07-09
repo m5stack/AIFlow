@@ -173,6 +173,8 @@ export interface AgentActiveDevice {
   id: string
   name: string
   type: string
+  fileTreeText?: string
+  fileTreeRoot?: string
 }
 
 export interface AgentStartTurnParams {

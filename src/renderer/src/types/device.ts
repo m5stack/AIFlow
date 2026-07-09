@@ -10,13 +10,17 @@ export interface DeviceItem {
 
 export interface DeviceFile {
   name: string
-  md5: string | null
+  isDirectory: boolean
 }
 
-export interface DeviceFileListResponse {
+export type DeviceFileTreeNode = {
+  [name: string]: DeviceFileTreeNode | null
+}
+
+export interface DeviceFileTreeResponse {
   file_op: number
   fs_path: string
-  file_list: DeviceFile[]
+  tree: DeviceFileTreeNode
 }
 
 export interface DeviceFilePreviewResponse {

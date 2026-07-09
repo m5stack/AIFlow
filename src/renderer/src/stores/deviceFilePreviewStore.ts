@@ -56,7 +56,7 @@ export const useDeviceFilePreviewStore = create<DeviceFilePreviewStoreState>((se
         return
       }
       if (preview.kind === 'image') {
-        const blob = new Blob([preview.bytes], { type: preview.mime })
+        const blob = new Blob([Uint8Array.from(preview.bytes)], { type: preview.mime })
         const objectUrl = URL.createObjectURL(blob)
         activeImageObjectUrl = objectUrl
         set({

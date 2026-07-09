@@ -1,20 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { deleteDeviceFile, getDeviceFileList } from '../../api/device'
-import type { DeviceFile } from '../../types/device'
+import { deleteDeviceFile, getDeviceFileTree } from '../../api/device'
+import type { DeviceFile, DeviceFileTreeNode } from '../../types/device'
 import { useActiveProjectDevices } from '../../hooks/useActiveProjectDevices'
 import { useClientIdStore } from '../../stores/clientIdStore'
 import { useDeviceFilePreviewStore } from '../../stores/deviceFilePreviewStore'
+import { useDeviceFileTreeStore } from '../../stores/deviceFileTreeStore'
 import { useDeviceStore } from '../../stores/deviceStore'
-import { ChevronLeftIcon, CodeIcon, FolderIcon, RefreshIcon, TrashIcon } from '../icons/Icons'
+import { isImagePath } from '../../../../shared/fileExtensions'
+import { ChevronLeftIcon, CodeIcon, FolderIcon, ImageIcon, RefreshIcon, TrashIcon } from '../icons/Icons'
 
 const ROOT_PATH = ''
 
-const isLikelyDirectory = (name: string): boolean => !name.includes('.')
-
 const compareDeviceFiles = (a: DeviceFile, b: DeviceFile): number => {
-  const aIsDir = isLikelyDirectory(a.name)
-  const bIsDir = isLikelyDirectory(b.name)
-  if (aIsDir !== bIsDir) return aIsDir ? -1 : 1
+  if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1
   return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
 }
 
@@ -28,6 +26,29 @@ const parentPath = (path: string): string => {
 const buildFilePath = (dirPath: string, fileName: string): string =>
   dirPath ? `${dirPath}/${fileName}` : fileName
 
+const resolveTreeNode = (tree: DeviceFileTreeNode | null, path: string): DeviceFileTreeNode | null => {
+  if (!tree) return null
+  if (!path) return tree
+
+  let node: DeviceFileTreeNode | null = tree
+  for (const segment of path.split('/')) {
+    if (!segment) continue
+    if (!node || node[segment] === undefined) return null
+    const next = node[segment]
+    if (next === null) return null
+    node = next
+  }
+  return node
+}
+
+const listTreeEntries = (node: DeviceFileTreeNode | null): DeviceFile[] => {
+  if (!node) return []
+  return Object.entries(node).map(([name, value]) => ({
+    name,
+    isDirectory: value !== null
+  }))
+}
+
 export default function DeviceFilesTab(): React.JSX.Element {
   const clientId = useClientIdStore((s) => s.clientId)
   const { selectedDevice } = useActiveProjectDevices()
@@ -35,6 +56,11 @@ export default function DeviceFilesTab(): React.JSX.Element {
   const loadPreview = useDeviceFilePreviewStore((s) => s.loadPreview)
   const clearPreview = useDeviceFilePreviewStore((s) => s.clearPreview)
   const selectedDeviceFilePath = useDeviceFilePreviewStore((s) => s.selectedFile?.path ?? null)
+  const storeDeviceId = useDeviceFileTreeStore((s) => s.deviceId)
+  const storeTree = useDeviceFileTreeStore((s) => s.tree)
+  const storeRootFsPath = useDeviceFileTreeStore((s) => s.rootFsPath)
+  const setDeviceFileTree = useDeviceFileTreeStore((s) => s.setTree)
+  const clearDeviceFileTree = useDeviceFileTreeStore((s) => s.clear)
 
   const displayDevice = useMemo(() => {
     if (selectedDevice && !selectedDevice.invalid) return selectedDevice
@@ -42,17 +68,31 @@ export default function DeviceFilesTab(): React.JSX.Element {
   }, [selectedDevice, allDevices])
 
   const [currentPath, setCurrentPath] = useState(ROOT_PATH)
-  const [fileList, setFileList] = useState<DeviceFile[]>([])
-  const [fsPath, setFsPath] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
   const [deletingFile, setDeletingFile] = useState<string | null>(null)
 
+  const tree = storeDeviceId === displayDevice?.id ? storeTree : null
+  const rootFsPath = storeDeviceId === displayDevice?.id ? storeRootFsPath : ''
+
+  const fsPath = useMemo(
+    () => (currentPath ? buildFilePath(rootFsPath, currentPath) : rootFsPath),
+    [currentPath, rootFsPath]
+  )
+
+  const currentNode = useMemo(() => resolveTreeNode(tree, currentPath), [tree, currentPath])
+
+  const sortedFileList = useMemo(
+    () => listTreeEntries(currentNode).sort(compareDeviceFiles),
+    [currentNode]
+  )
+
   useEffect(() => {
     setCurrentPath(ROOT_PATH)
     clearPreview()
-  }, [clearPreview, displayDevice?.id])
+    clearDeviceFileTree()
+  }, [clearDeviceFileTree, clearPreview, displayDevice?.id])
 
   useEffect(() => {
     clearPreview()
@@ -60,8 +100,7 @@ export default function DeviceFilesTab(): React.JSX.Element {
 
   const fetchFiles = useCallback(async () => {
     if (!displayDevice?.id) {
-      setFileList([])
-      setFsPath('')
+      clearDeviceFileTree()
       setError(null)
       setIsLoading(false)
       return
@@ -70,34 +109,30 @@ export default function DeviceFilesTab(): React.JSX.Element {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await getDeviceFileList({
+      const response = await getDeviceFileTree({
         deviceId: displayDevice.id,
-        clientId,
-        filePath: currentPath
+        clientId
       })
-      setFileList(response.file_list ?? [])
-      setFsPath(response.fs_path ?? currentPath)
+      setDeviceFileTree(displayDevice.id, response.tree ?? {}, response.fs_path ?? '')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load device files')
-      setFileList([])
-      setFsPath('')
+      clearDeviceFileTree()
     } finally {
       setIsLoading(false)
     }
-  }, [clientId, currentPath, displayDevice?.id])
+  }, [clearDeviceFileTree, clientId, displayDevice?.id, setDeviceFileTree])
 
   useEffect(() => {
     void fetchFiles()
   }, [fetchFiles, refreshTick])
 
   const handleOpenFolder = (name: string): void => {
-    const nextPath = fsPath ? `${fsPath}/${name}` : name
+    const nextPath = currentPath ? `${currentPath}/${name}` : name
     setCurrentPath(nextPath)
   }
 
   const handleGoBack = (): void => {
-    const nextPath = parentPath(fsPath)
-    setCurrentPath(nextPath || ROOT_PATH)
+    setCurrentPath(parentPath(currentPath) || ROOT_PATH)
   }
 
   const handleRefresh = (): void => {
@@ -138,11 +173,6 @@ export default function DeviceFilesTab(): React.JSX.Element {
     }
   }
 
-  const sortedFileList = useMemo(
-    () => [...fileList].sort(compareDeviceFiles),
-    [fileList]
-  )
-
   const showStatus = !displayDevice?.id || isLoading || !!error || sortedFileList.length === 0
 
   const renderStatus = (): React.ReactNode => {
@@ -164,7 +194,6 @@ export default function DeviceFilesTab(): React.JSX.Element {
   const renderFileList = (): React.ReactNode => (
     <div className="grid gap-2">
       {sortedFileList.map((file) => {
-        const isDirectory = isLikelyDirectory(file.name)
         const filePath = buildFilePath(fsPath, file.name)
         const isActive = selectedDeviceFilePath === filePath
         const isDeleting = deletingFile === file.name
@@ -177,7 +206,7 @@ export default function DeviceFilesTab(): React.JSX.Element {
                 : 'border-line bg-surface-2 text-ink hover:bg-soft'
             }`}
           >
-            {isDirectory ? (
+            {file.isDirectory ? (
               <button
                 type="button"
                 className="inline-flex min-w-0 flex-1 items-center gap-2 truncate text-left"
@@ -188,7 +217,11 @@ export default function DeviceFilesTab(): React.JSX.Element {
               </button>
             ) : (
               <>
-                <CodeIcon size={14} className="shrink-0 text-muted" />
+                {isImagePath(file.name) ? (
+                  <ImageIcon size={14} className="shrink-0 text-muted" />
+                ) : (
+                  <CodeIcon size={14} className="shrink-0 text-muted" />
+                )}
                 <button
                   type="button"
                   className="min-w-0 flex-1 truncate text-left"
@@ -196,11 +229,6 @@ export default function DeviceFilesTab(): React.JSX.Element {
                 >
                   {file.name}
                 </button>
-                {file.md5 ? (
-                  <span className="max-w-[120px] shrink-0 truncate text-[11px] text-muted">
-                    {file.md5}
-                  </span>
-                ) : null}
                 <button
                   type="button"
                   className="inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-[#ff6b6b] opacity-0 transition-all hover:bg-soft group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-40"
@@ -221,18 +249,18 @@ export default function DeviceFilesTab(): React.JSX.Element {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3.5">
       <div className="mb-3 flex items-center gap-2 text-[12px] text-muted">
-        {fsPath ? (
-          <>
-            <button
-              type="button"
-              className="inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded border border-line bg-surface-2 transition-colors hover:text-ink"
-              aria-label="Go back"
-              onClick={handleGoBack}
-            >
-              <ChevronLeftIcon size={12} />
-            </button>
-            <span className="min-w-0 flex-1 truncate font-medium text-ink">{fsPath}</span>
-          </>
+        {currentPath ? (
+          <button
+            type="button"
+            className="inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded border border-line bg-surface-2 transition-colors hover:text-ink"
+            aria-label="Go back"
+            onClick={handleGoBack}
+          >
+            <ChevronLeftIcon size={12} />
+          </button>
+        ) : null}
+        {rootFsPath ? (
+          <span className="min-w-0 flex-1 truncate font-medium text-ink">{fsPath}</span>
         ) : (
           <span className="flex-1" />
         )}
