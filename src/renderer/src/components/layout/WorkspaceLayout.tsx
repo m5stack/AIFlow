@@ -9,6 +9,7 @@ import DataPanel from '../data/DataPanel'
 import FilePanel from '../files/FilePanel'
 import TerminalPanel from '../terminal/TerminalPanel'
 import NewProjectDialog from '../project/NewProjectDialog'
+import AgentPermissionDialog from '../conversation/AgentPermissionDialog'
 import { useAgentSession } from '../../hooks/useAgentSession'
 import { useColumnResize } from '../../hooks/useColumnResize'
 import { useProjectStore } from '../../stores/projectStore'
@@ -70,6 +71,10 @@ export default function WorkspaceLayout(): React.JSX.Element {
         isOpen={showNewProjectDialog}
         onClose={() => setShowNewProjectDialog(false)}
         onConfirm={createProject}
+      />
+      <AgentPermissionDialog
+        request={session.activePermission}
+        onRespond={session.respondPermission}
       />
       <Toast.Provider placement="top end" />
     </div>

@@ -10,6 +10,7 @@ import { formatDeviceFileTree } from '../utils/device/formatDeviceFileTree'
 import { groupMessagesIntoTurns, mergeAssistantParts } from '../utils/conversation/chatTurns'
 import type {
   AgentActiveDevice,
+  AgentPermissionRequest,
   CreateUserModelConfigPayload,
   UpdateUserModelConfigPayload,
   UserModelConfig
@@ -49,6 +50,7 @@ export function useAgentSession() {
   >({})
   const [interruptingByConvId, setInterruptingByConvId] = useState<Record<string, boolean>>({})
   const [activityByConvId, setActivityByConvId] = useState<Record<string, string>>({})
+  const [permissionQueue, setPermissionQueue] = useState<AgentPermissionRequest[]>([])
 
   const tabsScrollRef = useRef<HTMLDivElement>(null)
   const thinkingMetaRef = useRef<Record<string, { startedAt: number; turnId: string }>>({})
@@ -69,6 +71,20 @@ export function useAgentSession() {
   const activityLabel = selectedConvId ? activityByConvId[selectedConvId] : undefined
   const autoScrollActive = isThinking || hasStreamingAssistant
   const setAi = useFlowStatusStore((s) => s.setAi)
+  const activePermission = permissionQueue[0] ?? null
+
+  const respondPermission = useCallback((behavior: 'allow' | 'deny') => {
+    setPermissionQueue((queue) => {
+      const request = queue[0]
+      if (!request) return queue
+      void window.ipc.agent.respondPermission({
+        requestId: request.requestId,
+        behavior,
+        message: behavior === 'deny' ? 'User denied permission.' : undefined
+      })
+      return queue.slice(1)
+    })
+  }, [])
 
   useEffect(() => {
     setAi(isThinking || hasStreamingAssistant)
@@ -186,12 +202,7 @@ export function useAgentSession() {
       toast.danger(`Claude failed: ${event.message}`)
     })
     const offPermission = window.ipc.agent.onPermission((event) => {
-      const allowed = window.confirm(event.title || `${event.toolName} wants permission.`)
-      void window.ipc.agent.respondPermission({
-        requestId: event.requestId,
-        behavior: allowed ? 'allow' : 'deny',
-        message: allowed ? undefined : 'User denied permission.'
-      })
+      setPermissionQueue((queue) => [...queue, event])
     })
 
     return () => {
@@ -381,7 +392,9 @@ export function useAgentSession() {
     renameConversation,
     handleAddConversation,
     setShowNewProjectDialog,
-    mergeAssistantParts
+    mergeAssistantParts,
+    activePermission,
+    respondPermission
   }
 }
 
