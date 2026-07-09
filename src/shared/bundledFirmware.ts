@@ -10,7 +10,8 @@ export interface BundledFirmwareEntry {
 /** UIFlow2 firmware images shipped with the app. */
 export const BUNDLED_FIRMWARES: BundledFirmwareEntry[] = [
   { id: 'sticks3', fileName: 'aiflow-sticks3.bin', label: 'StickS3' },
-  { id: 'stackchan', fileName: 'aiflow-stackchan.bin', label: 'StackChan' }
+  { id: 'stackchan', fileName: 'aiflow-stackchan.bin', label: 'StackChan' },
+  { id: 'cardputer-adv', fileName: 'aiflow-cardputeradv.bin', label: 'Cardputer-Adv' }
 ]
 
 export const DEFAULT_BUNDLED_FIRMWARE_ID = BUNDLED_FIRMWARES[0].id

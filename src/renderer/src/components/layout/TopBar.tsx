@@ -1,4 +1,5 @@
 import React from 'react'
+import { APP_DISPLAY_VERSION } from '../../../../shared/appVersion'
 import logoDark from '../../assets/m5logo-white.svg'
 import logoLight from '../../assets/m5logo2022.svg'
 import { useOnboardingStore } from '../../stores/onboardingStore'
@@ -26,7 +27,7 @@ export default function TopBar({ onNewProject }: TopBarProps): React.JSX.Element
             <span className="text-[32px] leading-none">AIFlow</span>
           </div>
           <span className="rounded-full bg-accent-bg px-2 py-0.5 text-[10px] font-semibold text-accent">
-            beta
+            v{APP_DISPLAY_VERSION}
           </span>
         </div>
         <p className="shrink-0 text-[10px] text-muted">

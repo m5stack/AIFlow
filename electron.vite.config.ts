@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync } from 'fs'
+import { copyFileSync, mkdirSync, readFileSync } from 'fs'
 import { dirname, resolve } from 'path'
 import { defineConfig } from 'electron-vite'
 import type { Plugin } from 'vite'
@@ -6,6 +6,8 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 const nvsPartitionGenSrc = resolve('src/shared/vendor/nvs_partition_gen.js')
+const appVersion = (JSON.parse(readFileSync(resolve('package.json'), 'utf-8')) as { version: string })
+  .version
 
 /** Copy NVS generator beside main bundle so main process can require() it at runtime. */
 function copyNvsPartitionGenPlugin(): Plugin {
@@ -47,6 +49,9 @@ export default defineConfig({
       }
     },
     plugins: [react(), tailwindcss()],
+    define: {
+      __APP_VERSION__: JSON.stringify(appVersion)
+    },
     optimizeDeps: {
       include: [
         'monaco-editor/esm/vs/editor/editor.worker',

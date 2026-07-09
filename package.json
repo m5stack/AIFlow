@@ -1,6 +1,6 @@
 {
   "name": "AIFlow",
-  "version": "1.0.1-beta",
+  "version": "1.0.2-beta",
   "description": "AIFlow",
   "main": "./out/main/index.js",
   "author": "M5Stack",
