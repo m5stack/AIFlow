@@ -4,11 +4,118 @@
 <head>
   <meta charset="UTF-8" />
   <title>AIFlow</title>
+  <style>
+    #splash {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      background: #f6f6f8;
+      transition: opacity 0.4s ease-out;
+    }
+
+    #splash.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .splash-icon {
+      width: 96px;
+      height: 96px;
+      animation: splash-breathe 2.2s ease-in-out infinite;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    @keyframes splash-breathe {
+      0%, 100% { transform: scale(0.94); opacity: 0.75; }
+      50%      { transform: scale(1.06); opacity: 1; }
+    }
+
+    .splash-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-width: 220px;
+    }
+
+    .splash-status {
+      font-size: 13px;
+      color: #999;
+      letter-spacing: 0.3px;
+      transition: opacity 0.25s;
+    }
+
+    .splash-progress {
+      width: 100%;
+      height: 3px;
+      background: #e0e0e0;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .splash-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #c0c0c0, #808080);
+      border-radius: 2px;
+      transition: width 0.6s ease;
+    }
+  </style>
 </head>
 
 <body>
+  <div id="splash">
+    <img class="splash-icon" src="/icon.png" alt="AIFlow" />
+    <div class="splash-info">
+      <div class="splash-status" id="splashStatus">Initializing...</div>
+      <div class="splash-progress">
+        <div class="splash-progress-bar" id="splashProgress"></div>
+      </div>
+    </div>
+  </div>
+
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
+
+  <script>
+    (function () {
+      const statusEl = document.getElementById('splashStatus')
+      const progressEl = document.getElementById('splashProgress')
+
+      const steps = [
+        { text: 'Loading runtime...',      progress: 12 },
+        { text: 'Initializing modules...',  progress: 30 },
+        { text: 'Preparing workspace...',   progress: 50 },
+        { text: 'Starting services...',     progress: 68 },
+        { text: 'Almost ready...',          progress: 85 },
+      ]
+
+      let i = 0
+      function next() {
+        if (i >= steps.length) return
+        var s = steps[i]
+        statusEl.style.opacity = '0'
+        setTimeout(function () {
+          statusEl.textContent = s.text
+          statusEl.style.opacity = '1'
+          progressEl.style.width = s.progress + '%'
+        }, 200)
+        i++
+        if (i < steps.length) {
+          setTimeout(next, 700 + Math.random() * 400)
+        }
+      }
+
+      setTimeout(next, 300)
+    })()
+  </script>
 </body>
 
 </html>
