@@ -18,6 +18,7 @@ import { tmpdir } from 'os'
 import { parseSkillFileName } from '../../shared/skillVersion'
 import { resolveSkillDisplayName } from '../../shared/skillDisplay'
 import type { SkillItem } from '../../shared/types'
+import { resolveSkillInstallTarget } from './skillInstallPath'
 
 const BUNDLED_SKILLS_DIR_NAME = 'skills'
 const USER_SKILLS_DIR_NAME = 'skills'
@@ -104,12 +105,7 @@ export class SkillService {
   }
 
   async installSkillFromZip(fileName: string, data: Buffer): Promise<SkillItem[]> {
-    const normalizedFileName = basename(fileName.trim())
-    if (!normalizedFileName || !normalizedFileName.toLowerCase().endsWith('.zip')) {
-      throw new Error('Skill package must be a .zip file.')
-    }
-
-    const slug = normalizedFileName.replace(/\.zip$/i, '')
+    const { slug, destDir } = resolveSkillInstallTarget(this.getUserSkillsRoot(), fileName)
     const { base: targetBase } = parseSkillFileName(slug)
     const tempDir = await mkdtemp(join(tmpdir(), 'aiflow-skill-'))
 
@@ -118,7 +114,6 @@ export class SkillService {
       zip.extractAllTo(tempDir, true)
 
       const skillRoot = await this.resolveExtractedSkillRoot(tempDir)
-      const destDir = join(this.userSkillsDir, slug)
 
       await mkdir(this.userSkillsDir, { recursive: true })
       await this.removeUserSkillsByBase(targetBase, slug)
