@@ -11,6 +11,8 @@ import {
   ModalHeading
 } from '@heroui/react'
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -38,9 +40,24 @@ type ChartColors = {
   cursor: string
 }
 
+type TokenSeriesKey = 'input' | 'output' | 'cache'
+type TokenSeriesVisibility = Record<TokenSeriesKey, boolean>
+
+const TOKEN_SERIES: Array<{ key: TokenSeriesKey; label: string }> = [
+  { key: 'input', label: 'Input' },
+  { key: 'output', label: 'Output' },
+  { key: 'cache', label: 'Cache' }
+]
+
+const createVisibleTokenSeries = (): TokenSeriesVisibility => ({
+  input: true,
+  output: true,
+  cache: true
+})
+
 const EMPTY_STATS: TokenUsageStats = {
   generatedAt: '',
-  retentionDays: 3,
+  retentionDays: 7,
   byModel: [],
   daily: []
 }
@@ -93,19 +110,72 @@ const tooltipStyle = {
 function TokenChartTooltip({
   active,
   label,
-  payload
-}: TooltipContentProps): React.JSX.Element | null {
-  if (!active || !payload.length) return null
+  payload,
+  colors
+}: Partial<TooltipContentProps> & { colors: ChartColors }): React.JSX.Element | null {
+  if (!active || !payload?.length) return null
 
   const row = payload[0]?.payload as TokenChartRow | undefined
   if (!row) return null
 
+  const tokenCounts: Record<TokenSeriesKey, number> = {
+    input: row.inputTokens,
+    output: row.outputTokens,
+    cache: row.cacheTokens
+  }
+
   return (
     <div style={tooltipStyle}>
       {label ? <div className="mb-1 font-medium text-ink">{label}</div> : null}
-      <div className="text-muted">Input: {formatTokenCount(row.inputTokens)}</div>
-      <div className="text-muted">Output: {formatTokenCount(row.outputTokens)}</div>
-      <div className="text-muted">Cache: {formatTokenCount(row.cacheTokens)}</div>
+      <div className="flex flex-col gap-0.5">
+        {TOKEN_SERIES.map(({ key, label: seriesLabel }) => (
+          <div key={key} className="flex items-center gap-1.5 text-muted">
+            <span
+              className="size-2.5 shrink-0 rounded-[2px]"
+              style={{ backgroundColor: colors[key] }}
+              aria-hidden
+            />
+            <span>
+              {seriesLabel}: {formatTokenCount(tokenCounts[key])}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function InteractiveTokenLegend({
+  colors,
+  visibility,
+  onToggle
+}: {
+  colors: ChartColors
+  visibility: TokenSeriesVisibility
+  onToggle: (key: TokenSeriesKey) => void
+}): React.JSX.Element {
+  return (
+    <div className="flex items-center justify-center gap-4 pt-1 text-[12px]">
+      {TOKEN_SERIES.map(({ key, label }) => {
+        const isVisible = visibility[key]
+        return (
+          <button
+            key={key}
+            type="button"
+            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-sm px-1 py-0.5 text-muted outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-focus ${isVisible ? 'opacity-100' : 'opacity-40'}`}
+            aria-pressed={isVisible}
+            aria-label={`${label} series ${isVisible ? 'shown' : 'hidden'}`}
+            onClick={() => onToggle(key)}
+          >
+            <span
+              className="size-2.5 shrink-0"
+              style={{ backgroundColor: colors[key] }}
+              aria-hidden
+            />
+            <span>{label}</span>
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -118,22 +188,41 @@ export default function TokenUsageDashboardDialog({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [chartColors, setChartColors] = useState<ChartColors>(() => readChartColors())
+  const [modelSeriesVisibility, setModelSeriesVisibility] =
+    useState<TokenSeriesVisibility>(createVisibleTokenSeries)
+  const [dailySeriesVisibility, setDailySeriesVisibility] =
+    useState<TokenSeriesVisibility>(createVisibleTokenSeries)
 
   useEffect(() => {
     if (!isOpen) return
 
-    setChartColors(readChartColors())
-    setIsLoading(true)
-    setError(null)
+    let isCancelled = false
+    queueMicrotask(() => {
+      if (isCancelled) return
+      setChartColors(readChartColors())
+      setModelSeriesVisibility(createVisibleTokenSeries())
+      setDailySeriesVisibility(createVisibleTokenSeries())
+      setIsLoading(true)
+      setError(null)
+    })
 
     void window.ipc.tokenUsage
       .getStats()
-      .then((nextStats) => setStats(nextStats))
+      .then((nextStats) => {
+        if (!isCancelled) setStats(nextStats)
+      })
       .catch((err) => {
+        if (isCancelled) return
         setStats(EMPTY_STATS)
         setError(err instanceof Error ? err.message : 'Failed to load token usage stats')
       })
-      .finally(() => setIsLoading(false))
+      .finally(() => {
+        if (!isCancelled) setIsLoading(false)
+      })
+
+    return () => {
+      isCancelled = true
+    }
   }, [isOpen])
 
   const summary = useMemo(() => {
@@ -173,9 +262,9 @@ export default function TokenUsageDashboardDialog({
         }
         return {
           date: formatDayLabel(day.date),
-          input: chartValue(inputTokens),
-          output: chartValue(outputTokens),
-          cache: chartValue(cacheTokens),
+          input: inputTokens,
+          output: outputTokens,
+          cache: cacheTokens,
           inputTokens,
           outputTokens,
           cacheTokens
@@ -186,16 +275,16 @@ export default function TokenUsageDashboardDialog({
 
   const hasData = stats.byModel.length > 0
   const chartTooltipProps: Pick<TooltipProps, 'content' | 'cursor'> = {
-    content: TokenChartTooltip,
+    content: <TokenChartTooltip colors={chartColors} />,
     cursor: { fill: chartColors.cursor, fillOpacity: 0.1 }
   }
-  const chartLegendProps = {
-    wrapperStyle: { fontSize: 12 },
-    payload: [
-      { value: 'Input', type: 'square' as const, color: chartColors.input, id: 'input' },
-      { value: 'Output', type: 'square' as const, color: chartColors.output, id: 'output' },
-      { value: 'Cache', type: 'square' as const, color: chartColors.cache, id: 'cache' }
-    ]
+
+  const toggleModelSeries = (key: TokenSeriesKey): void => {
+    setModelSeriesVisibility((current) => ({ ...current, [key]: !current[key] }))
+  }
+
+  const toggleDailySeries = (key: TokenSeriesKey): void => {
+    setDailySeriesVisibility((current) => ({ ...current, [key]: !current[key] }))
   }
 
   return (
@@ -252,7 +341,6 @@ export default function TokenUsageDashboardDialog({
                           data={modelChartData}
                           margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
                           barCategoryGap="20%"
-                          barGap={4}
                         >
                           <CartesianGrid
                             stroke={chartColors.grid}
@@ -274,27 +362,40 @@ export default function TokenUsageDashboardDialog({
                             tickFormatter={(value: number) => formatTokenCount(value)}
                           />
                           <Tooltip {...chartTooltipProps} />
-                          <Legend {...chartLegendProps} />
+                          <Legend
+                            content={
+                              <InteractiveTokenLegend
+                                colors={chartColors}
+                                visibility={modelSeriesVisibility}
+                                onToggle={toggleModelSeries}
+                              />
+                            }
+                          />
                           <Bar
                             dataKey="input"
                             name="Input"
                             fill={chartColors.input}
-                            radius={[4, 4, 0, 0]}
+                            stackId="tokens"
+                            radius={[0, 0, 4, 4]}
                             minPointSize={3}
+                            hide={!modelSeriesVisibility.input}
                           />
                           <Bar
                             dataKey="output"
                             name="Output"
                             fill={chartColors.output}
-                            radius={[4, 4, 0, 0]}
+                            stackId="tokens"
                             minPointSize={3}
+                            hide={!modelSeriesVisibility.output}
                           />
                           <Bar
                             dataKey="cache"
                             name="Cache"
                             fill={chartColors.cache}
+                            stackId="tokens"
                             radius={[4, 4, 0, 0]}
                             minPointSize={3}
+                            hide={!modelSeriesVisibility.cache}
                           />
                         </BarChart>
                       </ResponsiveContainer>
@@ -305,11 +406,9 @@ export default function TokenUsageDashboardDialog({
                     <h3 className="text-[13px] font-semibold text-ink">Daily trend</h3>
                     <div className="h-48 rounded-lg border border-line bg-surface-2 p-2">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
+                        <AreaChart
                           data={dailyChartData}
                           margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-                          barCategoryGap="20%"
-                          barGap={4}
                         >
                           <CartesianGrid
                             stroke={chartColors.grid}
@@ -330,29 +429,52 @@ export default function TokenUsageDashboardDialog({
                             tickFormatter={(value: number) => formatTokenCount(value)}
                           />
                           <Tooltip {...chartTooltipProps} />
-                          <Legend {...chartLegendProps} />
-                          <Bar
+                          <Legend
+                            content={
+                              <InteractiveTokenLegend
+                                colors={chartColors}
+                                visibility={dailySeriesVisibility}
+                                onToggle={toggleDailySeries}
+                              />
+                            }
+                          />
+                          <Area
+                            type="monotone"
                             dataKey="input"
                             name="Input"
+                            stroke={chartColors.input}
                             fill={chartColors.input}
-                            radius={[4, 4, 0, 0]}
-                            minPointSize={3}
+                            fillOpacity={0.1}
+                            strokeWidth={2}
+                            dot={{ r: 2, strokeWidth: 1 }}
+                            activeDot={{ r: 4 }}
+                            hide={!dailySeriesVisibility.input}
                           />
-                          <Bar
+                          <Area
+                            type="monotone"
                             dataKey="output"
                             name="Output"
+                            stroke={chartColors.output}
                             fill={chartColors.output}
-                            radius={[4, 4, 0, 0]}
-                            minPointSize={3}
+                            fillOpacity={0.1}
+                            strokeWidth={2}
+                            dot={{ r: 2, strokeWidth: 1 }}
+                            activeDot={{ r: 4 }}
+                            hide={!dailySeriesVisibility.output}
                           />
-                          <Bar
+                          <Area
+                            type="monotone"
                             dataKey="cache"
                             name="Cache"
+                            stroke={chartColors.cache}
                             fill={chartColors.cache}
-                            radius={[4, 4, 0, 0]}
-                            minPointSize={3}
+                            fillOpacity={0.1}
+                            strokeWidth={2}
+                            dot={{ r: 2, strokeWidth: 1 }}
+                            activeDot={{ r: 4 }}
+                            hide={!dailySeriesVisibility.cache}
                           />
-                        </BarChart>
+                        </AreaChart>
                       </ResponsiveContainer>
                     </div>
                   </section>

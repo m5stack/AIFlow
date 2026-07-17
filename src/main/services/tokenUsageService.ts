@@ -12,7 +12,7 @@ type TokenUsageFile = {
   records: TokenUsageRecord[]
 }
 
-const RETENTION_DAYS = 3
+const RETENTION_DAYS = 7
 const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000
 
 const safeJsonParse = <T>(raw: string, fallback: T): T => {

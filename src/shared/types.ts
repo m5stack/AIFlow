@@ -45,7 +45,7 @@ export interface TokenUsageDailyStat {
 
 export interface TokenUsageStats {
   generatedAt: string
-  retentionDays: 3
+  retentionDays: 7
   byModel: TokenUsageModelStat[]
   daily: TokenUsageDailyStat[]
 }
