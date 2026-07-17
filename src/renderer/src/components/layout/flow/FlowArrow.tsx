@@ -16,7 +16,15 @@ function ArrowSvg({ direction }: { direction: FlowArrowDirection }): React.JSX.E
   if (direction === 'up') {
     return (
       <svg viewBox="0 0 24 30" fill="none" aria-hidden="true">
-        <line x1="12" y1="26" x2="12" y2="8" stroke="currentColor" strokeWidth={STROKE_WIDTH} strokeLinecap="round" />
+        <line
+          x1="12"
+          y1="26"
+          x2="12"
+          y2="8"
+          stroke="currentColor"
+          strokeWidth={STROKE_WIDTH}
+          strokeLinecap="round"
+        />
         <polyline
           points="6,14 12,6 18,14"
           stroke="currentColor"
@@ -32,7 +40,15 @@ function ArrowSvg({ direction }: { direction: FlowArrowDirection }): React.JSX.E
   if (direction === 'down') {
     return (
       <svg viewBox="0 0 24 30" fill="none" aria-hidden="true">
-        <line x1="12" y1="4" x2="12" y2="22" stroke="currentColor" strokeWidth={STROKE_WIDTH} strokeLinecap="round" />
+        <line
+          x1="12"
+          y1="4"
+          x2="12"
+          y2="22"
+          stroke="currentColor"
+          strokeWidth={STROKE_WIDTH}
+          strokeLinecap="round"
+        />
         <polyline
           points="6,16 12,24 18,16"
           stroke="currentColor"
@@ -46,17 +62,19 @@ function ArrowSvg({ direction }: { direction: FlowArrowDirection }): React.JSX.E
   }
 
   return (
-    <svg viewBox="0 0 40 30" fill="none" aria-hidden="true">
-      <line x1="4" y1="15" x2="28" y2="15" stroke="currentColor" strokeWidth={STROKE_WIDTH} strokeLinecap="round" />
-      <polyline
-        points="22,8 32,15 22,22"
-        stroke="currentColor"
-        strokeWidth={STROKE_WIDTH}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-    </svg>
+    <span className="flow-arrow-horizontal" aria-hidden="true">
+      <span className="flow-arrow-horizontal-line" />
+      <svg viewBox="0 0 14 30" fill="none">
+        <polyline
+          points="1,8 13,15 1,22"
+          stroke="currentColor"
+          strokeWidth={STROKE_WIDTH}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+        />
+      </svg>
+    </span>
   )
 }
 
