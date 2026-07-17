@@ -1,6 +1,10 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { toast } from '@heroui/react'
-import { createUserChatMessage, flushPendingProjectFileWrite, useProjectStore } from '../stores/projectStore'
+import {
+  createUserChatMessage,
+  flushPendingProjectFileWrite,
+  useProjectStore
+} from '../stores/projectStore'
 import { useFlowStatusStore } from '../stores/flowStatusStore'
 import { useSessionTokenUsageStore } from '../stores/sessionTokenUsageStore'
 import { useDeviceStore } from '../stores/deviceStore'
@@ -262,25 +266,27 @@ export function useAgentSession() {
 
     filesChangedByConvIdRef.current[convId] = false
     setActivityByConvId((prev) => ({ ...prev, [convId]: 'Starting…' }))
-    void appendConversationMessages(projectId, convId, [userMsg])
     startThinkingTurn(convId, userMsg.id)
     setThinkingByConvId((prev) => ({ ...prev, [convId]: true }))
     setInterruptingByConvId((prev) => ({ ...prev, [convId]: false }))
-    void flushPendingProjectFileWrite().then(() =>
-      window.ipc.agent
-        .startTurn({
+    void Promise.all([
+      appendConversationMessages(projectId, convId, [userMsg]),
+      flushPendingProjectFileWrite()
+    ])
+      .then(() =>
+        window.ipc.agent.startTurn({
           projectId,
           convId,
           prompt: content,
           activeDevice,
           modelConfigId: selectedModel
         })
-        .catch((error) => {
-          finishThinkingTurn(projectId, convId)
-          setThinkingByConvId((prev) => ({ ...prev, [convId]: false }))
-          toast.danger(`Claude failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
-        })
-    )
+      )
+      .catch((error) => {
+        finishThinkingTurn(projectId, convId)
+        setThinkingByConvId((prev) => ({ ...prev, [convId]: false }))
+        toast.danger(`Claude failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      })
   }
 
   const handleInterrupt = (): void => {

@@ -79,6 +79,7 @@ type ProjectIndex = {
 }
 
 const nowIso = (): string => new Date().toISOString()
+const ATOMIC_RENAME_RETRY_DELAYS_MS = [25, 50, 100, 200] as const
 
 const safeJsonParse = <T>(raw: string, fallback: T): T => {
   try {
@@ -88,10 +89,36 @@ const safeJsonParse = <T>(raw: string, fallback: T): T => {
   }
 }
 
+const isRetryableRenameError = (error: unknown): boolean =>
+  typeof error === 'object' &&
+  error !== null &&
+  'code' in error &&
+  ['EPERM', 'EACCES', 'EBUSY'].includes(String((error as NodeJS.ErrnoException).code))
+
+const wait = (delayMs: number): Promise<void> =>
+  new Promise((resolvePromise) => setTimeout(resolvePromise, delayMs))
+
+const renameWithRetry = async (fromPath: string, toPath: string): Promise<void> => {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await rename(fromPath, toPath)
+      return
+    } catch (error) {
+      const delayMs = ATOMIC_RENAME_RETRY_DELAYS_MS[attempt]
+      if (delayMs === undefined || !isRetryableRenameError(error)) throw error
+      await wait(delayMs)
+    }
+  }
+}
+
 const writeFileAtomic = async (filePath: string, data: string | Buffer): Promise<void> => {
-  const tempPath = `${filePath}.tmp`
-  await writeFile(tempPath, data)
-  await rename(tempPath, filePath)
+  const tempPath = `${filePath}.${process.pid}.${randomUUID()}.tmp`
+  try {
+    await writeFile(tempPath, data)
+    await renameWithRetry(tempPath, filePath)
+  } finally {
+    await rm(tempPath, { force: true }).catch(() => undefined)
+  }
 }
 
 const isMissingFileError = (error: unknown): boolean =>
@@ -139,6 +166,7 @@ export class ProjectService {
   private readonly projectsDir: string
   private readonly indexPath: string
   private readonly projectLocks = new Map<string, Promise<unknown>>()
+  private readonly conversationLocks = new Map<string, Promise<unknown>>()
 
   constructor(
     projectsDir = join(app.getPath('userData'), PROJECTS_DIR_NAME),
@@ -423,10 +451,12 @@ export class ProjectService {
   }
 
   async deleteConversation(projectId: string, convId: string): Promise<void> {
-    const conversations = await this.readConversations(projectId)
-    if (conversations.length <= 1) return
-    await rm(this.conversationPath(projectId, convId), { force: true })
-    await this.touchProject(projectId)
+    await this.withConversationLock(projectId, convId, async () => {
+      const conversations = await this.readConversations(projectId)
+      if (conversations.length <= 1) return
+      await rm(this.conversationPath(projectId, convId), { force: true })
+      await this.touchProject(projectId)
+    })
   }
 
   async renameConversation(
@@ -436,12 +466,11 @@ export class ProjectService {
   ): Promise<ProjectConversation> {
     const safeTitle = title.trim()
     if (!safeTitle) throw new Error('Chat name cannot be empty.')
-    const conversation = await this.readConversation(projectId, convId)
-    conversation.title = safeTitle
-    conversation.updatedAt = nowIso()
-    await this.writeConversation(projectId, conversation)
-    await this.touchProject(projectId)
-    return conversation
+    return this.mutateConversation(projectId, convId, (conversation) => {
+      if (conversation.title === safeTitle) return false
+      conversation.title = safeTitle
+      return true
+    })
   }
 
   async appendConversationMessages(
@@ -449,12 +478,10 @@ export class ProjectService {
     convId: string,
     messages: ChatMessage[]
   ): Promise<ProjectConversation> {
-    const conversation = await this.readConversation(projectId, convId)
-    conversation.messages = this.upsertMessages(conversation.messages, messages)
-    conversation.updatedAt = nowIso()
-    await this.writeConversation(projectId, conversation)
-    await this.touchProject(projectId)
-    return conversation
+    return this.mutateConversation(projectId, convId, (conversation) => {
+      conversation.messages = this.upsertMessages(conversation.messages, messages)
+      return true
+    })
   }
 
   private upsertMessages(existing: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
@@ -476,30 +503,47 @@ export class ProjectService {
     return next
   }
 
+  private findTurnAssistantIndex(conversation: ProjectConversation, userMessageId: string): number {
+    const userIndex = conversation.messages.findIndex((message) => message.id === userMessageId)
+    if (userIndex === -1) return -1
+
+    let assistantIndex = -1
+    for (let i = userIndex + 1; i < conversation.messages.length; i += 1) {
+      if (conversation.messages[i].role === 'user') break
+      if (conversation.messages[i].role === 'assistant') assistantIndex = i
+    }
+    return assistantIndex
+  }
+
+  private mutateConversation(
+    projectId: string,
+    convId: string,
+    mutator: (conversation: ProjectConversation) => boolean
+  ): Promise<ProjectConversation> {
+    return this.withConversationLock(projectId, convId, async () => {
+      const conversation = await this.readConversation(projectId, convId)
+      if (!mutator(conversation)) return conversation
+      conversation.updatedAt = nowIso()
+      await this.writeConversation(projectId, conversation)
+      await this.touchProject(projectId)
+      return conversation
+    })
+  }
+
   async setTurnDuration(
     projectId: string,
     convId: string,
     userMessageId: string,
     durationMs: number
   ): Promise<ProjectConversation> {
-    const conversation = await this.readConversation(projectId, convId)
-    const userIndex = conversation.messages.findIndex((message) => message.id === userMessageId)
-    if (userIndex === -1) return conversation
-
-    let lastAssistantIndex = -1
-    for (let i = userIndex + 1; i < conversation.messages.length; i++) {
-      if (conversation.messages[i].role === 'user') break
-      if (conversation.messages[i].role === 'assistant') lastAssistantIndex = i
-    }
-    if (lastAssistantIndex === -1) return conversation
-
-    const messages = [...conversation.messages]
-    messages[lastAssistantIndex] = { ...messages[lastAssistantIndex], durationMs }
-    conversation.messages = messages
-    conversation.updatedAt = nowIso()
-    await this.writeConversation(projectId, conversation)
-    await this.touchProject(projectId)
-    return conversation
+    return this.mutateConversation(projectId, convId, (conversation) => {
+      const assistantIndex = this.findTurnAssistantIndex(conversation, userMessageId)
+      if (assistantIndex === -1) return false
+      const messages = [...conversation.messages]
+      messages[assistantIndex] = { ...messages[assistantIndex], durationMs }
+      conversation.messages = messages
+      return true
+    })
   }
 
   async setTurnTokenUsage(
@@ -508,24 +552,14 @@ export class ProjectService {
     userMessageId: string,
     tokenUsage: ChatTokenUsage
   ): Promise<ProjectConversation> {
-    const conversation = await this.readConversation(projectId, convId)
-    const userIndex = conversation.messages.findIndex((message) => message.id === userMessageId)
-    if (userIndex === -1) return conversation
-
-    let lastAssistantIndex = -1
-    for (let i = userIndex + 1; i < conversation.messages.length; i++) {
-      if (conversation.messages[i].role === 'user') break
-      if (conversation.messages[i].role === 'assistant') lastAssistantIndex = i
-    }
-    if (lastAssistantIndex === -1) return conversation
-
-    const messages = [...conversation.messages]
-    messages[lastAssistantIndex] = { ...messages[lastAssistantIndex], tokenUsage }
-    conversation.messages = messages
-    conversation.updatedAt = nowIso()
-    await this.writeConversation(projectId, conversation)
-    await this.touchProject(projectId)
-    return conversation
+    return this.mutateConversation(projectId, convId, (conversation) => {
+      const assistantIndex = this.findTurnAssistantIndex(conversation, userMessageId)
+      if (assistantIndex === -1) return false
+      const messages = [...conversation.messages]
+      messages[assistantIndex] = { ...messages[assistantIndex], tokenUsage }
+      conversation.messages = messages
+      return true
+    })
   }
 
   async setTurnTokenUsageForLastTurn(
@@ -533,22 +567,18 @@ export class ProjectService {
     convId: string,
     tokenUsage: ChatTokenUsage
   ): Promise<ProjectConversation> {
-    const conversation = await this.readConversation(projectId, convId)
-    let lastUserIndex = -1
-    for (let i = conversation.messages.length - 1; i >= 0; i--) {
-      if (conversation.messages[i].role === 'user') {
-        lastUserIndex = i
-        break
-      }
-    }
-    if (lastUserIndex === -1) return conversation
-
-    return this.setTurnTokenUsage(
-      projectId,
-      convId,
-      conversation.messages[lastUserIndex].id,
-      tokenUsage
-    )
+    return this.mutateConversation(projectId, convId, (conversation) => {
+      const lastUserMessage = [...conversation.messages]
+        .reverse()
+        .find((message) => message.role === 'user')
+      if (!lastUserMessage) return false
+      const assistantIndex = this.findTurnAssistantIndex(conversation, lastUserMessage.id)
+      if (assistantIndex === -1) return false
+      const messages = [...conversation.messages]
+      messages[assistantIndex] = { ...messages[assistantIndex], tokenUsage }
+      conversation.messages = messages
+      return true
+    })
   }
 
   async setTurnRunStatus(
@@ -557,24 +587,14 @@ export class ProjectService {
     userMessageId: string,
     runStatus: ChatMessageRunStatus
   ): Promise<ProjectConversation> {
-    const conversation = await this.readConversation(projectId, convId)
-    const userIndex = conversation.messages.findIndex((message) => message.id === userMessageId)
-    if (userIndex === -1) return conversation
-
-    let lastAssistantIndex = -1
-    for (let i = userIndex + 1; i < conversation.messages.length; i++) {
-      if (conversation.messages[i].role === 'user') break
-      if (conversation.messages[i].role === 'assistant') lastAssistantIndex = i
-    }
-    if (lastAssistantIndex === -1) return conversation
-
-    const messages = [...conversation.messages]
-    messages[lastAssistantIndex] = { ...messages[lastAssistantIndex], runStatus }
-    conversation.messages = messages
-    conversation.updatedAt = nowIso()
-    await this.writeConversation(projectId, conversation)
-    await this.touchProject(projectId)
-    return conversation
+    return this.mutateConversation(projectId, convId, (conversation) => {
+      const assistantIndex = this.findTurnAssistantIndex(conversation, userMessageId)
+      if (assistantIndex === -1) return false
+      const messages = [...conversation.messages]
+      messages[assistantIndex] = { ...messages[assistantIndex], runStatus }
+      conversation.messages = messages
+      return true
+    })
   }
 
   async updateConversationSession(
@@ -582,12 +602,11 @@ export class ProjectService {
     convId: string,
     sessionId: string
   ): Promise<ProjectConversation> {
-    const conversation = await this.readConversation(projectId, convId)
-    conversation.claudeSessionId = sessionId
-    conversation.updatedAt = nowIso()
-    await this.writeConversation(projectId, conversation)
-    await this.touchProject(projectId)
-    return conversation
+    return this.mutateConversation(projectId, convId, (conversation) => {
+      if (conversation.claudeSessionId === sessionId) return false
+      conversation.claudeSessionId = sessionId
+      return true
+    })
   }
 
   async setActiveDevice(projectId: string, deviceId?: string): Promise<ProjectItem> {
@@ -641,9 +660,11 @@ export class ProjectService {
         await Promise.all(
           conversations.map(async (conversation) => {
             if (!conversation.claudeSessionId) return
-            delete conversation.claudeSessionId
-            conversation.updatedAt = nowIso()
-            await this.writeConversation(projectId, conversation)
+            await this.mutateConversation(projectId, conversation.id, (latestConversation) => {
+              if (!latestConversation.claudeSessionId) return false
+              delete latestConversation.claudeSessionId
+              return true
+            })
           })
         )
       })
@@ -753,9 +774,7 @@ export class ProjectService {
       }
       const label = resourceLabelForFile(node.path, node.language)
       if (label) {
-        lines.push(
-          `${node.path}  (${label}, code path: ${codePathForResource(node.path, label)})`
-        )
+        lines.push(`${node.path}  (${label}, code path: ${codePathForResource(node.path, label)})`)
       } else {
         lines.push(`${node.path}  (source)`)
       }
@@ -838,6 +857,22 @@ export class ProjectService {
     return current.finally(() => {
       if (this.projectLocks.get(projectId) === current) {
         this.projectLocks.delete(projectId)
+      }
+    })
+  }
+
+  private withConversationLock<T>(
+    projectId: string,
+    convId: string,
+    task: () => Promise<T>
+  ): Promise<T> {
+    const lockKey = `${normalizeProjectId(projectId)}:${normalizeConversationId(convId)}`
+    const previous = this.conversationLocks.get(lockKey) ?? Promise.resolve()
+    const current = previous.catch(() => undefined).then(task)
+    this.conversationLocks.set(lockKey, current)
+    return current.finally(() => {
+      if (this.conversationLocks.get(lockKey) === current) {
+        this.conversationLocks.delete(lockKey)
       }
     })
   }

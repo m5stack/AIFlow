@@ -404,7 +404,8 @@ export class AgentService {
 
       this.activeQueries.set(params.convId, currentQuery)
 
-      let sessionId: string | undefined
+      let sessionId = conversation.claudeSessionId
+      let persistedSessionId = conversation.claudeSessionId
       for await (const sdkMessage of currentQuery) {
         const message = sdkMessage as Record<string, unknown>
         console.log('[agent] message', {
@@ -428,12 +429,14 @@ export class AgentService {
           sessionId: typeof message.session_id === 'string' ? message.session_id : undefined
         })
         sessionId = typeof message.session_id === 'string' ? message.session_id : sessionId
-        if (sessionId)
+        if (sessionId && sessionId !== persistedSessionId) {
           await this.projectService.updateConversationSession(
             params.projectId,
             params.convId,
             sessionId
           )
+          persistedSessionId = sessionId
+        }
         await this.handleSdkMessage(params, message)
       }
 
