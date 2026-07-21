@@ -9,7 +9,8 @@ import type {
   AgentPermissionResponse,
   AgentRewindParams,
   AgentStartTurnParams,
-  AgentTurnCompleteEvent
+  AgentTurnCompleteEvent,
+  GenerateConversationTitleParams
 } from '../../shared/types'
 import { AgentService } from '../services/agentService'
 import type { ProjectService } from '../services/projectService'
@@ -55,16 +56,26 @@ export function registerAgentIpc(
   )
 
   ipcMain.removeHandler('agent:startTurn')
+  ipcMain.removeHandler('agent:generateConversationTitle')
   ipcMain.removeHandler('agent:respondPermission')
   ipcMain.removeHandler('agent:interrupt')
   ipcMain.removeHandler('agent:rewindFiles')
 
-  ipcMain.handle('agent:startTurn', (_event, params: AgentStartTurnParams) => agentService.startTurn(params))
+  ipcMain.handle('agent:startTurn', (_event, params: AgentStartTurnParams) =>
+    agentService.startTurn(params)
+  )
+  ipcMain.handle(
+    'agent:generateConversationTitle',
+    (_event, params: GenerateConversationTitleParams) =>
+      agentService.generateConversationTitle(params)
+  )
   ipcMain.handle('agent:respondPermission', (_event, response: AgentPermissionResponse) => {
     agentService.respondPermission(response)
   })
   ipcMain.handle('agent:interrupt', (_event, convId: string) => agentService.interrupt(convId))
-  ipcMain.handle('agent:rewindFiles', (_event, params: AgentRewindParams) => agentService.rewindFiles(params))
+  ipcMain.handle('agent:rewindFiles', (_event, params: AgentRewindParams) =>
+    agentService.rewindFiles(params)
+  )
 
   return agentService
 }

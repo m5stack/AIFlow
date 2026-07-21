@@ -111,6 +111,7 @@ export class TokenUsageService {
       const label = record.label?.trim() || model
       const cacheTokens = cacheTokensFromRecord(record)
       const totalTokens = record.inputTokens + record.outputTokens + cacheTokens
+      const turnCount = record.purpose === 'title' ? 0 : 1
 
       const existingModel = byModelMap.get(model)
       if (existingModel) {
@@ -119,7 +120,7 @@ export class TokenUsageService {
         existingModel.cacheTokens += cacheTokens
         existingModel.totalTokens += totalTokens
         existingModel.totalCostUsd += record.totalCostUsd ?? 0
-        existingModel.turns += 1
+        existingModel.turns += turnCount
         if (!existingModel.label && label) {
           existingModel.label = label
         }
@@ -132,7 +133,7 @@ export class TokenUsageService {
           cacheTokens,
           totalTokens,
           totalCostUsd: record.totalCostUsd ?? 0,
-          turns: 1
+          turns: turnCount
         })
       }
 

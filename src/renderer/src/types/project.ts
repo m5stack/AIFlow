@@ -11,6 +11,7 @@ export type {
   ChatMessage,
   ChatMessageRunStatus,
   ChatTokenUsage,
+  GenerateConversationTitleParams,
   TokenUsageDailyStat,
   TokenUsageModelStat,
   TokenUsageStats,

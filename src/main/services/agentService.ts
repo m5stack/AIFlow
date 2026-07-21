@@ -11,15 +11,26 @@ import type {
   AgentTurnCompleteEvent,
   AgentActiveDevice,
   ChatMessage,
-  ChatTokenUsage
+  ChatTokenUsage,
+  GenerateConversationTitleParams,
+  ProjectConversation
 } from '../../shared/types'
 import { formatPinMapsForPrompt, normalizeDeviceTypeForPinMap } from '../../shared/deviceInfo'
 import { buildAgentSdkEnv } from '../agentEnv'
 import { getClaudeExecutablePath } from '../claudeExecutablePath'
-import { DEVICE_RESOURCE_RULES_CRITICAL, type ProjectService } from './projectService'
+import {
+  DEVICE_RESOURCE_RULES_CRITICAL,
+  isNewChatPlaceholderTitle,
+  type ProjectService
+} from './projectService'
 import type { UserModelService } from './userModelService'
 import type { McpService } from './mcpService'
 import type { TokenUsageService } from './tokenUsageService'
+import {
+  buildFallbackConversationTitle,
+  generateConversationTitleRequest,
+  normalizeConversationTitle
+} from './conversationTitleGenerator'
 
 type QueryHandle = {
   close(): void
@@ -243,6 +254,65 @@ export class AgentService {
     const turnId = `turn-${Date.now()}-${Math.random().toString(16).slice(2)}`
     void this.runTurn(params)
     return { turnId }
+  }
+
+  async generateConversationTitle(
+    params: GenerateConversationTitleParams
+  ): Promise<ProjectConversation> {
+    const conversation = await this.projectService.getConversation(params.projectId, params.convId)
+    if (!isNewChatPlaceholderTitle(conversation.title)) return conversation
+
+    const firstUserMessage = conversation.messages.find((message) => message.role === 'user')
+    const firstAssistantMessage = conversation.messages.find(
+      (message) => message.role === 'assistant' && message.content.trim()
+    )
+    if (!firstUserMessage) return conversation
+
+    const fallbackTitle = buildFallbackConversationTitle(firstUserMessage.content)
+    let nextTitle = fallbackTitle
+
+    try {
+      const credentials = await this.userModelService.getCredentials(params.modelConfigId)
+      if (!credentials) throw new Error('Model configuration not found.')
+
+      const generated = await generateConversationTitleRequest({
+        model: credentials.model,
+        apiKey: credentials.apiKey,
+        baseUrl: credentials.baseUrl,
+        userMessage: firstUserMessage.content,
+        assistantMessage: firstAssistantMessage?.content ?? ''
+      })
+      const normalizedTitle = normalizeConversationTitle(generated.title)
+      nextTitle =
+        normalizedTitle && !isNewChatPlaceholderTitle(normalizedTitle)
+          ? normalizedTitle
+          : fallbackTitle
+
+      if (generated.tokenUsage.inputTokens > 0 || generated.tokenUsage.outputTokens > 0) {
+        const models = await this.userModelService.listModels()
+        const label = models.find((model) => model.id === params.modelConfigId)?.label
+        await this.tokenUsageService.record({
+          timestamp: new Date().toISOString(),
+          model: credentials.model,
+          modelConfigId: params.modelConfigId,
+          label,
+          purpose: 'title',
+          ...generated.tokenUsage
+        })
+      }
+    } catch (error) {
+      console.warn('[agent] conversation title generation failed; using fallback', {
+        projectId: params.projectId,
+        convId: params.convId,
+        message: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+
+    return this.projectService.applyGeneratedConversationTitle(
+      params.projectId,
+      params.convId,
+      nextTitle
+    )
   }
 
   respondPermission(response: AgentPermissionResponse): void {

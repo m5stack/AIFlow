@@ -9,6 +9,7 @@ import type {
   AgentRewindResult,
   AgentStartTurnParams,
   AgentTurnCompleteEvent,
+  GenerateConversationTitleParams,
   ChatMessage,
   ChatMessageRunStatus,
   ChatTokenUsage,
@@ -84,6 +85,7 @@ export interface ProjectAPI {
 
 export interface AgentAPI {
   startTurn(params: AgentStartTurnParams): Promise<{ turnId: string }>
+  generateConversationTitle(params: GenerateConversationTitleParams): Promise<ProjectConversation>
   respondPermission(response: AgentPermissionResponse): Promise<void>
   interrupt(convId: string): Promise<void>
   rewindFiles(params: AgentRewindParams): Promise<AgentRewindResult>

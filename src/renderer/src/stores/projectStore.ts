@@ -4,6 +4,7 @@ import type {
   ChatMessage,
   ChatMessageRunStatus,
   ChatTokenUsage,
+  GenerateConversationTitleParams,
   LegacyProjectPayload,
   ProjectConversation,
   ProjectFileNode,
@@ -235,6 +236,7 @@ interface ProjectStoreState {
   addConversation: (projectId: string) => Promise<void>
   deleteConversation: (projectId: string, convId: string) => Promise<void>
   renameConversation: (projectId: string, convId: string, title: string) => Promise<void>
+  generateConversationTitle: (params: GenerateConversationTitleParams) => Promise<void>
   appendConversationMessages: (
     projectId: string,
     convId: string,
@@ -595,6 +597,33 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       toast.success(`Chat renamed to "${conversation.title}".`)
     } catch (error) {
       toast.danger(`Rename failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  },
+
+  generateConversationTitle: async (params) => {
+    try {
+      const conversation = await window.ipc.agent.generateConversationTitle(params)
+      set((state) => ({
+        projects: state.projects.map((project) =>
+          project.id === params.projectId
+            ? {
+                ...project,
+                conversations: project.conversations.map((current) =>
+                  current.id === conversation.id
+                    ? {
+                        ...current,
+                        title: conversation.title,
+                        updatedAt: conversation.updatedAt
+                      }
+                    : current
+                ),
+                updatedAt: conversation.updatedAt
+              }
+            : project
+        )
+      }))
+    } catch (error) {
+      console.warn('Conversation title update failed.', error)
     }
   },
 

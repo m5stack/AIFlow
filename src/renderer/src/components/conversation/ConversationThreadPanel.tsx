@@ -50,7 +50,7 @@ export default function ConversationThreadPanel({
       actions={<SessionTokenBadge />}
       bodyClassName="flex flex-col gap-3 overflow-hidden"
     >
-      <div className="flex shrink-0 items-center gap-2 border-b border-line p-2">
+      <div className="conversation-tabs-bar">
         <ConversationTabs
           conversations={conversations}
           selectedConvId={selectedConvId}

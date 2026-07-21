@@ -1,0 +1,247 @@
+.conversation-tabs-bar {
+  display: flex;
+  height: 40px;
+  flex-shrink: 0;
+  align-items: flex-end;
+  padding: 0 8px 0 0;
+  background: var(--surface-3);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--line) 72%, transparent);
+}
+
+.conversation-tabs {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: flex-end;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.conversation-tabs-scroll {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: flex-end;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.conversation-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.conversation-tab {
+  --conversation-tab-bg: transparent;
+
+  position: relative;
+  display: flex;
+  width: 148px;
+  min-width: 112px;
+  max-width: 200px;
+  height: 32px;
+  flex: 0 1 148px;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background-color: var(--conversation-tab-bg);
+  color: color-mix(in srgb, var(--muted) 82%, var(--ink));
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.conversation-tab + .conversation-tab::before {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 1px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 48%, var(--line));
+  content: '';
+  transition: opacity 120ms ease;
+}
+
+.conversation-tab.is-active::before,
+.conversation-tab.is-active + .conversation-tab::before {
+  display: none;
+}
+
+.conversation-tab:not(.is-active):hover,
+.conversation-tab:not(.is-active):has(:focus-visible) {
+  --conversation-tab-bg: color-mix(in srgb, var(--soft) 72%, var(--surface));
+
+  border-color: color-mix(in srgb, var(--muted) 32%, var(--line));
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--surface) 76%, transparent);
+}
+
+.conversation-tab:not(.is-active):hover::before,
+.conversation-tab:not(.is-active):has(:focus-visible)::before,
+.conversation-tab:not(.is-active):hover + .conversation-tab::before,
+.conversation-tab:not(.is-active):has(:focus-visible) + .conversation-tab::before {
+  opacity: 0;
+}
+
+.conversation-tab.is-active {
+  --conversation-tab-bg: var(--surface);
+
+  border-color: var(--line);
+  border-radius: 12px 12px 0 0;
+  color: var(--ink);
+  box-shadow: 0 -3px 10px rgba(15, 23, 36, 0.1);
+}
+
+.conversation-tab-title {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  cursor: pointer;
+  overflow: hidden;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversation-tab.is-active .conversation-tab-title.has-delete {
+  padding-right: 34px;
+}
+
+.conversation-tab-title:focus-visible,
+.conversation-tab-action:focus-visible,
+.conversation-tabs-add:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.conversation-tab-actions {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding-left: 6px;
+  background-color: transparent;
+  transform: translateY(-50%);
+  transition: background-color 150ms ease;
+}
+
+.conversation-tab:hover .conversation-tab-actions,
+.conversation-tab:has(:focus-visible) .conversation-tab-actions {
+  background-color: var(--conversation-tab-bg);
+}
+
+.conversation-tab-action {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 120ms ease,
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.conversation-tab:hover .conversation-tab-action,
+.conversation-tab:has(:focus-visible) .conversation-tab-action,
+.conversation-tab.is-active .conversation-tab-close {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.conversation-tab-action:hover {
+  background: color-mix(in srgb, var(--ink) 8%, var(--conversation-tab-bg));
+  color: var(--ink);
+}
+
+.conversation-tab.is-active .conversation-tab-action:hover {
+  background: var(--surface-2);
+}
+
+.conversation-tab-input {
+  z-index: 2;
+  width: calc(100% - 8px);
+  min-width: 0;
+  height: 26px;
+  margin: 0 4px;
+  padding: 0 7px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.app-input.conversation-tab-input,
+.app-input.conversation-tab-input:hover:not(:focus) {
+  background-color: var(--conversation-tab-bg);
+  color: inherit;
+}
+
+.conversation-tabs-empty {
+  align-self: center;
+  padding: 0 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.conversation-tabs-add-wrap {
+  display: flex;
+  height: 28px;
+  flex-shrink: 0;
+  align-items: center;
+  padding-left: 6px;
+  border-left: 1px solid var(--line);
+  margin-bottom: 2px;
+}
+
+.conversation-tabs-add {
+  display: inline-flex;
+  width: 27px;
+  height: 27px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--muted);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
+}
+
+.conversation-tabs-add:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--soft);
+  color: var(--ink);
+}
+
+.conversation-tabs-add:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+html[data-theme='dark'] .conversation-tab.is-active,
+.dark .conversation-tab.is-active {
+  box-shadow: 0 -3px 10px rgba(0, 0, 0, 0.34);
+}

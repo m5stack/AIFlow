@@ -21,6 +21,8 @@ import type {
 } from '../../../shared/types'
 import type { ChatModelOption } from '../types/model'
 
+const NEW_CHAT_TITLE_PATTERN = /^New chat(?: \d+)?$/
+
 export function useAgentSession() {
   const {
     projects,
@@ -30,6 +32,7 @@ export function useAgentSession() {
     addConversation,
     deleteConversation,
     renameConversation,
+    generateConversationTitle,
     appendConversationMessages,
     setTurnDuration,
     applyTurnTokenUsage,
@@ -59,6 +62,9 @@ export function useAgentSession() {
   const tabsScrollRef = useRef<HTMLDivElement>(null)
   const thinkingMetaRef = useRef<Record<string, { startedAt: number; turnId: string }>>({})
   const filesChangedByConvIdRef = useRef<Record<string, boolean>>({})
+  const pendingTitleByConvIdRef = useRef<
+    Record<string, { projectId: string; modelConfigId: string }>
+  >({})
 
   const onboardingOpen = useOnboardingStore((s) => s.isOpen)
   const prevOnboardingOpenRef = useRef(onboardingOpen)
@@ -181,6 +187,21 @@ export function useAgentSession() {
         delete next[event.convId]
         return next
       })
+      const pendingTitle = pendingTitleByConvIdRef.current[event.convId]
+      if (pendingTitle) {
+        delete pendingTitleByConvIdRef.current[event.convId]
+        const currentConversation = useProjectStore
+          .getState()
+          .projects.find((project) => project.id === pendingTitle.projectId)
+          ?.conversations.find((conversation) => conversation.id === event.convId)
+        if (currentConversation && NEW_CHAT_TITLE_PATTERN.test(currentConversation.title.trim())) {
+          void generateConversationTitle({
+            projectId: pendingTitle.projectId,
+            convId: event.convId,
+            modelConfigId: pendingTitle.modelConfigId
+          })
+        }
+      }
       const generatedCode = filesChangedByConvIdRef.current[event.convId] === true
       delete filesChangedByConvIdRef.current[event.convId]
       if (generatedCode) {
@@ -221,6 +242,7 @@ export function useAgentSession() {
     autoRunGeneratedCode,
     applyTurnTokenUsage,
     finishThinkingTurn,
+    generateConversationTitle,
     handleAgentFilesChanged,
     handleAgentMessage,
     reloadActiveCodeFile
@@ -263,6 +285,17 @@ export function useAgentSession() {
       }
     }
     const userMsg = createUserChatMessage(content)
+
+    if (
+      selectedConv &&
+      NEW_CHAT_TITLE_PATTERN.test(selectedConv.title.trim()) &&
+      !pendingTitleByConvIdRef.current[convId]
+    ) {
+      pendingTitleByConvIdRef.current[convId] = {
+        projectId,
+        modelConfigId: selectedModel
+      }
+    }
 
     filesChangedByConvIdRef.current[convId] = false
     setActivityByConvId((prev) => ({ ...prev, [convId]: 'Starting…' }))

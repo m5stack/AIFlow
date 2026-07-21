@@ -18,6 +18,7 @@ export interface TokenUsageRecord extends ChatTokenUsage {
   model: string
   modelConfigId?: string
   label?: string
+  purpose?: 'chat' | 'title'
 }
 
 export interface TokenUsageModelStat {
@@ -184,6 +185,12 @@ export interface AgentStartTurnParams {
   activeDevice?: AgentActiveDevice
   model?: string
   modelConfigId?: string
+}
+
+export interface GenerateConversationTitleParams {
+  projectId: string
+  convId: string
+  modelConfigId: string
 }
 
 export interface AgentPermissionRequest {

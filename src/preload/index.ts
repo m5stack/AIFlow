@@ -11,6 +11,7 @@ import type {
   AgentRewindResult,
   AgentStartTurnParams,
   AgentTurnCompleteEvent,
+  GenerateConversationTitleParams,
   ChatMessage,
   ChatMessageRunStatus,
   ChatTokenUsage,
@@ -142,6 +143,11 @@ const ipc: IpcAPI = {
   agent: {
     startTurn(params: AgentStartTurnParams): Promise<{ turnId: string }> {
       return ipcRenderer.invoke('agent:startTurn', params)
+    },
+    generateConversationTitle(
+      params: GenerateConversationTitleParams
+    ): Promise<ProjectConversation> {
+      return ipcRenderer.invoke('agent:generateConversationTitle', params)
     },
     respondPermission(response: AgentPermissionResponse): Promise<void> {
       return ipcRenderer.invoke('agent:respondPermission', response)

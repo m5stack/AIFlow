@@ -26,6 +26,8 @@ const CHATS_DIR_NAME = 'chats'
 const ASSETS_DIR_NAME = 'assets'
 const DEFAULT_LANGUAGE = 'python'
 const DEFAULT_FILE_NAME = 'main.py'
+const NEW_CHAT_TITLE = 'New chat'
+const NEW_CHAT_TITLE_PATTERN = /^New chat(?: \d+)?$/
 const FILE_TREE_MAX_ENTRIES = 200
 const FILE_TREE_MAX_CHARS = 8000
 
@@ -80,6 +82,26 @@ type ProjectIndex = {
 
 const nowIso = (): string => new Date().toISOString()
 const ATOMIC_RENAME_RETRY_DELAYS_MS = [25, 50, 100, 200] as const
+
+const uniqueConversationTitle = (
+  desiredTitle: string,
+  conversations: ProjectConversation[],
+  excludeConvId?: string
+): string => {
+  const existingTitles = new Set(
+    conversations
+      .filter((conversation) => conversation.id !== excludeConvId)
+      .map((conversation) => conversation.title.trim().toLocaleLowerCase())
+  )
+  if (!existingTitles.has(desiredTitle.toLocaleLowerCase())) return desiredTitle
+
+  let suffix = 2
+  while (existingTitles.has(`${desiredTitle} ${suffix}`.toLocaleLowerCase())) suffix += 1
+  return `${desiredTitle} ${suffix}`
+}
+
+export const isNewChatPlaceholderTitle = (title: string): boolean =>
+  NEW_CHAT_TITLE_PATTERN.test(title.trim())
 
 const safeJsonParse = <T>(raw: string, fallback: T): T => {
   try {
@@ -441,7 +463,7 @@ export class ProjectService {
     const conversations = await this.readConversations(projectId)
     const conversation: ProjectConversation = {
       id: normalizeConversationId(),
-      title: `Chat ${conversations.length + 1}`,
+      title: uniqueConversationTitle(NEW_CHAT_TITLE, conversations),
       updatedAt: nowIso(),
       messages: []
     }
@@ -469,6 +491,20 @@ export class ProjectService {
     return this.mutateConversation(projectId, convId, (conversation) => {
       if (conversation.title === safeTitle) return false
       conversation.title = safeTitle
+      return true
+    })
+  }
+
+  async applyGeneratedConversationTitle(
+    projectId: string,
+    convId: string,
+    title: string
+  ): Promise<ProjectConversation> {
+    const conversations = await this.readConversations(projectId)
+    const uniqueTitle = uniqueConversationTitle(title, conversations, convId)
+    return this.mutateConversation(projectId, convId, (conversation) => {
+      if (!isNewChatPlaceholderTitle(conversation.title)) return false
+      conversation.title = uniqueTitle
       return true
     })
   }

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { PlusIcon, CloseIcon, EditIcon } from '../icons/Icons'
 import type { ProjectConversation } from '../../types/project'
+import './conversation-tabs.css'
 
 interface ConversationTabsProps {
   conversations: ProjectConversation[]
@@ -53,26 +54,48 @@ export default function ConversationTabs({
     clearEditing()
   }
 
+  const handleTabKeyDown = (event: React.KeyboardEvent, currentIndex: number): void => {
+    let nextIndex: number | null = null
+    if (event.key === 'ArrowLeft') {
+      nextIndex = (currentIndex - 1 + conversations.length) % conversations.length
+    } else if (event.key === 'ArrowRight') {
+      nextIndex = (currentIndex + 1) % conversations.length
+    } else if (event.key === 'Home') {
+      nextIndex = 0
+    } else if (event.key === 'End') {
+      nextIndex = conversations.length - 1
+    }
+    if (nextIndex === null) return
+
+    event.preventDefault()
+    const nextConversation = conversations[nextIndex]
+    onSelect(nextConversation.id)
+    requestAnimationFrame(() => {
+      tabsScrollRef.current
+        ?.querySelector<HTMLElement>(`[data-conv-id="${nextConversation.id}"] [role="tab"]`)
+        ?.focus()
+    })
+  }
+
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
-      <div ref={tabsScrollRef} className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+    <div className="conversation-tabs">
+      <div
+        ref={tabsScrollRef}
+        role="tablist"
+        aria-label="Project conversations"
+        className="conversation-tabs-scroll"
+      >
         {conversations.length > 0 ? (
-          conversations.map((conv) => {
+          conversations.map((conv, index) => {
             const isActive = conv.id === selectedConvId
             const isEditing = editingConvId === conv.id
-            const deleteButtonVisibility = isActive
-              ? 'inline-flex'
-              : 'hidden group-hover/tab:inline-flex'
+            const canDelete = conversations.length > 1
 
             return (
               <div
                 key={conv.id}
                 data-conv-id={conv.id}
-                className={`group/tab flex h-7 shrink-0 max-w-[180px] cursor-pointer items-center rounded-md text-[12px] transition-colors ${
-                  isActive
-                    ? 'bg-accent-bg font-medium text-ink'
-                    : 'text-muted hover:bg-soft hover:text-ink'
-                }`}
+                className={`conversation-tab${isActive ? ' is-active' : ''}${isEditing ? ' is-editing' : ''}`}
               >
                 {isEditing ? (
                   <input
@@ -92,14 +115,20 @@ export default function ConversationTabs({
                     }}
                     onBlur={() => submitRename(conv.id, conv.title)}
                     onClick={(e) => e.stopPropagation()}
-                    className="app-input h-6 min-w-0 flex-1 rounded-sm px-2 text-[12px]"
+                    aria-label="Conversation name"
+                    className="app-input conversation-tab-input"
                   />
                 ) : (
                   <>
                     <button
                       type="button"
-                      className="min-w-0 flex-1 cursor-pointer truncate px-2.5 text-left"
+                      role="tab"
+                      aria-selected={isActive}
+                      tabIndex={isActive ? 0 : -1}
+                      className={`conversation-tab-title${canDelete ? ' has-delete' : ''}`}
+                      title={conv.title}
                       onClick={() => onSelect(conv.id)}
+                      onKeyDown={(event) => handleTabKeyDown(event, index)}
                       onDoubleClick={(e) => {
                         e.preventDefault()
                         startRename(conv)
@@ -107,46 +136,57 @@ export default function ConversationTabs({
                     >
                       {conv.title}
                     </button>
-                    <button
-                      type="button"
-                      className="hidden size-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted hover:text-ink group-hover/tab:inline-flex"
-                      aria-label="Rename conversation"
-                      title="Rename conversation"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        startRename(conv)
-                      }}
-                    >
-                      <EditIcon size={10} />
-                    </button>
-                    {conversations.length > 1 && (
+                    <div className="conversation-tab-actions">
                       <button
                         type="button"
-                        className={`mr-0.5 size-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted hover:text-ink ${deleteButtonVisibility}`}
-                        aria-label="Delete conversation"
-                        onClick={() => onDelete(conv.id)}
+                        className="conversation-tab-action conversation-tab-rename"
+                        aria-label="Rename conversation"
+                        title="Rename conversation"
+                        tabIndex={isActive ? 0 : -1}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          startRename(conv)
+                        }}
                       >
-                        <CloseIcon size={10} />
+                        <EditIcon size={10} />
                       </button>
-                    )}
+                      {canDelete ? (
+                        <button
+                          type="button"
+                          className="conversation-tab-action conversation-tab-close"
+                          aria-label="Delete conversation"
+                          title="Delete conversation"
+                          tabIndex={isActive ? 0 : -1}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            onDelete(conv.id)
+                          }}
+                        >
+                          <CloseIcon size={10} />
+                        </button>
+                      ) : null}
+                    </div>
                   </>
                 )}
               </div>
             )
           })
         ) : (
-          <span className="text-[12px] text-muted">No conversation</span>
+          <span className="conversation-tabs-empty">No conversation</span>
         )}
       </div>
-      <button
-        type="button"
-        className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted transition-colors hover:bg-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
-        aria-label="New conversation"
-        onClick={onAdd}
-        disabled={hasNoProject || !activeProjectId}
-      >
-        <PlusIcon size={14} />
-      </button>
+      <div className="conversation-tabs-add-wrap">
+        <button
+          type="button"
+          className="conversation-tabs-add"
+          aria-label="New chat"
+          title="New chat"
+          onClick={onAdd}
+          disabled={hasNoProject || !activeProjectId}
+        >
+          <PlusIcon size={13} />
+        </button>
+      </div>
     </div>
   )
 }
