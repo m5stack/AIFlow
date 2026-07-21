@@ -1,4 +1,3 @@
-export const REALTIME_WS_PORT = 28082
 export const REALTIME_WS_PATH = '/ws/realtime'
 
 export function buildRealtimeWsUrl(deviceId: string): string {
@@ -7,7 +6,7 @@ export function buildRealtimeWsUrl(deviceId: string): string {
 
   if (base.startsWith('http://') || base.startsWith('https://')) {
     const hostname = new URL(base).hostname
-    return `ws://${hostname}:${REALTIME_WS_PORT}${REALTIME_WS_PATH}?${params}`
+    return `wss://${hostname}${REALTIME_WS_PATH}?${params}`
   }
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
