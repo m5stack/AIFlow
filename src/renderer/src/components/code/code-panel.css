@@ -1,0 +1,9 @@
+.code-panel-run-action {
+  border: none;
+  background: linear-gradient(135deg, #8b5cf6 0%, #b06cf7 100%);
+  color: #fff;
+}
+
+.code-panel-run-action:hover:not(:disabled) {
+  opacity: 0.92;
+}

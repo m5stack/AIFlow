@@ -1,12 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Checkbox, Tooltip, toast } from '@heroui/react'
-import { useClientIdStore } from '../../../stores/clientIdStore'
 import { useDeviceStore } from '../../../stores/deviceStore'
 import { useProjectStore } from '../../../stores/projectStore'
 import { useFlowStatusStore } from '../../../stores/flowStatusStore'
 import { useActiveProjectDevices } from '../../../hooks/useActiveProjectDevices'
 import { imgUnknown } from '../../../utils/device/deviceImage'
-import { runProjectOnDevice } from '../../../utils/device/runProjectOnDevice'
 import { removeDeviceWithConfirm } from '../../../utils/device/removeDeviceWithConfirm'
 import AddDeviceDialog from '../../device/AddDeviceDialog'
 import DeviceCardContent from '../../device/DeviceCardContent'
@@ -17,26 +15,22 @@ import {
   ChevronRightIcon,
   EditIcon,
   ListIcon,
-  PlayIcon,
   PlusIcon,
+  SendIcon,
   TrashIcon,
   ZapIcon
 } from '../../icons/Icons'
 
 export default function FlowDevice(): React.JSX.Element {
-  const clientId = useClientIdStore((s) => s.clientId)
   const allDevices = useDeviceStore((s) => s.devices)
   const unbindDevice = useDeviceStore((s) => s.unbindDevice)
   const renameDevice = useDeviceStore((s) => s.renameDevice)
 
   const setProjectActiveDevice = useProjectStore((s) => s.setProjectActiveDevice)
   const clearActiveDeviceReferences = useProjectStore((s) => s.clearActiveDeviceReferences)
-  const codeFilePath = useProjectStore((s) => s.codeFilePath)
-  const selectedFileContent = useProjectStore((s) => s.selectedFileContent)
   const autoRunAfterChatEnabled = useProjectStore((s) => s.autoRunAfterChatEnabled)
   const setAutoRunAfterChatEnabled = useProjectStore((s) => s.setAutoRunAfterChatEnabled)
   const deviceGlow = useFlowStatusStore((s) => s.device)
-  const setDeviceGlow = useFlowStatusStore((s) => s.setDevice)
   const talk = useFlowStatusStore((s) => s.talk)
   const showGlow = !talk && deviceGlow !== 'idle'
 
@@ -46,7 +40,6 @@ export default function FlowDevice(): React.JSX.Element {
   const [showAddDeviceDialog, setShowAddDeviceDialog] = useState(false)
   const [showFlashDialog, setShowFlashDialog] = useState(false)
   const [previewDeviceId, setPreviewDeviceId] = useState('')
-  const [isRunning, setIsRunning] = useState(false)
   const [isRemoving, setIsRemoving] = useState(false)
   const [isEditingName, setIsEditingName] = useState(false)
   const [editingName, setEditingName] = useState('')
@@ -84,7 +77,6 @@ export default function FlowDevice(): React.JSX.Element {
   const canRemove =
     !!displayDevice?.id && allDevices.some((d) => d.id === displayDevice.id) && !isRemoving
   const poolDevice = allDevices.find((d) => d.id === displayDevice?.id)
-  const canRun = !!activeProjectId && !!selectedDevice?.id && !selectedDevice.invalid && !isRunning
   const canRename =
     hasDevice && !!displayDevice?.id && !displayDevice.invalid && !!poolDevice && !isRenaming
 
@@ -164,50 +156,6 @@ export default function FlowDevice(): React.JSX.Element {
       if (!removed) return
     } finally {
       setIsRemoving(false)
-    }
-  }
-
-  const runOnDevice = async (includeMainPyInDownload: boolean): Promise<void> => {
-    if (!activeProjectId) {
-      toast.danger('Please select a project first.')
-      return
-    }
-    if (!selectedDevice?.id) {
-      toast.danger('Please select a device for this project.')
-      return
-    }
-    if (selectedDevice.invalid) {
-      toast.danger('This device is invalid. Please select or add another device.')
-      return
-    }
-
-    const selectedPath = codeFilePath ?? undefined
-    setIsRunning(true)
-    setDeviceGlow('running')
-    try {
-      const { ran } = await runProjectOnDevice({
-        projectId: activeProjectId,
-        deviceId: selectedDevice.id,
-        clientId,
-        fileNodes: activeProject?.files ?? [],
-        selectedPath,
-        selectedContent: selectedFileContent,
-        includeMainPyInDownload
-      })
-      if (!ran) {
-        setDeviceGlow('idle')
-        toast.danger('No code to run. Add main.py content first.')
-        return
-      }
-      setDeviceGlow('success')
-      toast.success(
-        includeMainPyInDownload ? 'Files downloaded and code sent.' : 'Code sent to device.'
-      )
-    } catch (error) {
-      setDeviceGlow('failed')
-      toast.danger(`Run failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    } finally {
-      setIsRunning(false)
     }
   }
 
@@ -365,23 +313,9 @@ export default function FlowDevice(): React.JSX.Element {
         </div>
 
         <div className="flow-device-side">
-          <Button
-            size="sm"
-            className="flow-device-run flow-device-run-download"
-            isDisabled={!canRun}
-            onPress={() => void runOnDevice(true)}
-          >
-            {isRunning ? 'Running…' : 'Run & Download'}
-          </Button>
-          <Button
-            size="sm"
-            variant="primary"
-            className="flow-device-run flow-device-run-send"
-            isDisabled={!canRun}
-            onPress={() => void runOnDevice(false)}
-          >
-            <PlayIcon size={12} />
-            {isRunning ? 'Running…' : 'Run'}
+          <Button size="sm" className="flow-device-run flow-device-run-device">
+            <SendIcon size={12} />
+            Send to device
           </Button>
           <Button
             size="sm"

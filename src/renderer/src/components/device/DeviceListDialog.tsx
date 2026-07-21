@@ -217,12 +217,7 @@ export default function DeviceListDialog({
                                   </span>
                                   <button
                                     type="button"
-                                    className="absolute left-full top-1/2 -translate-y-1/2 ml-0.5 inline-flex items-center justify-center size-[13px] rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer pointer-events-none group-hover:pointer-events-auto"
-                                    style={{
-                                      background: 'transparent',
-                                      border: 'none',
-                                      color: 'var(--text-muted, rgba(0,0,0,0.45))'
-                                    }}
+                                    className="absolute left-full top-1/2 -translate-y-1/2 ml-0.5 inline-flex size-[13px] cursor-pointer items-center justify-center rounded border-0 bg-transparent text-muted opacity-0 transition-[color,opacity] hover:text-white focus-visible:text-white group-hover:pointer-events-auto group-hover:opacity-100 pointer-events-none"
                                     title="Rename device"
                                     aria-label="Rename device"
                                     disabled={!!removingId || isRenaming}
