@@ -5,13 +5,12 @@ import { useDeviceStore } from '../../../stores/deviceStore'
 import { useProjectStore } from '../../../stores/projectStore'
 import { useFlowStatusStore } from '../../../stores/flowStatusStore'
 import { useActiveProjectDevices } from '../../../hooks/useActiveProjectDevices'
-import { resolveDeviceImage, imgUnknown } from '../../../utils/device/deviceImage'
+import { imgUnknown } from '../../../utils/device/deviceImage'
 import { runProjectOnDevice } from '../../../utils/device/runProjectOnDevice'
 import { removeDeviceWithConfirm } from '../../../utils/device/removeDeviceWithConfirm'
-import { getDeviceStatusPresentation } from '../../../utils/device/deviceStatus'
 import AddDeviceDialog from '../../device/AddDeviceDialog'
+import DeviceCardContent from '../../device/DeviceCardContent'
 import DeviceListDialog from '../../device/DeviceListDialog'
-import DeviceStatusIndicator from '../../device/DeviceStatusIndicator'
 import FirmwareFlashDialog from '../../device/FirmwareFlashDialog'
 import {
   ChevronLeftIcon,
@@ -83,9 +82,7 @@ export default function FlowDevice(): React.JSX.Element {
   const canCycle = allDevices.length >= 2
   const hasDevice = !!displayDevice
   const canRemove =
-    !!displayDevice?.id &&
-    allDevices.some((d) => d.id === displayDevice.id) &&
-    !isRemoving
+    !!displayDevice?.id && allDevices.some((d) => d.id === displayDevice.id) && !isRemoving
   const poolDevice = allDevices.find((d) => d.id === displayDevice?.id)
   const canRun = !!activeProjectId && !!selectedDevice?.id && !selectedDevice.invalid && !isRunning
   const canRename =
@@ -103,13 +100,7 @@ export default function FlowDevice(): React.JSX.Element {
     }
   }
 
-  const deviceImage = hasDevice ? resolveDeviceImage(displayDevice.type) : imgUnknown
   const deviceName = !displayDevice ? 'No device' : displayDevice.name || displayDevice.type
-  const deviceType = hasDevice ? displayDevice.type : ''
-
-  const deviceStatus = displayDevice
-    ? getDeviceStatusPresentation(displayDevice)
-    : { label: 'No device paired', color: 'var(--status-disconnected)' }
 
   const clearNameEditing = (): void => {
     setIsEditingName(false)
@@ -224,14 +215,15 @@ export default function FlowDevice(): React.JSX.Element {
     <>
       <div className="flow-device-wrap">
         <div
-          className={`flow-device${showGlow && deviceGlow === 'running'
+          className={`flow-device${
+            showGlow && deviceGlow === 'running'
               ? ' flow-device-running'
               : showGlow && deviceGlow === 'success'
                 ? ' flow-device-success'
                 : showGlow && deviceGlow === 'failed'
                   ? ' flow-device-failed'
                   : ''
-            }`}
+          }`}
         >
           <div className="flow-device-left">
             <span className="flow-device-title">Device</span>
@@ -285,87 +277,79 @@ export default function FlowDevice(): React.JSX.Element {
             </button>
 
             <div className="flow-device-info">
-              <div className="flow-device-thumb">
-                <img src={deviceImage} alt="" />
-                <Tooltip delay={300}>
-                  <Tooltip.Trigger className="inline-flex">
-                    <span
-                      className="flow-device-status-dot"
-                      title={deviceStatus.label}
-                      aria-label={`Device status: ${deviceStatus.label}`}
-                      style={{
-                        backgroundColor: deviceStatus.color
-                      }}
-                    />
-                  </Tooltip.Trigger>
-                  <Tooltip.Content placement="top" showArrow>
-                    {deviceStatus.label}
-                  </Tooltip.Content>
-                </Tooltip>
-                {canRemove ? (
-                  <Tooltip delay={300}>
-                    <Tooltip.Trigger className="flow-device-remove-anchor">
-                      <button
-                        type="button"
-                        className="flow-device-remove"
-                        aria-label="Remove device"
-                        onClick={() => {
-                          void handleRemoveDevice()
-                        }}
-                      >
-                        <TrashIcon size={8} />
-                      </button>
-                    </Tooltip.Trigger>
-                    <Tooltip.Content placement="top" showArrow>
-                      Remove device
-                    </Tooltip.Content>
-                  </Tooltip>
-                ) : null}
-              </div>
-              <div className="flow-device-text">
-                <span className={`flow-device-name${isEditingName ? ' is-editing' : ''}`}>
-                  <span className="flow-device-name-label">{deviceName}</span>
-                  {displayDevice?.invalid && <span className="flow-device-invalid">Invalid</span>}
-                  {canRename ? (
-                    <button
-                      type="button"
-                      className="flow-device-name-edit"
-                      aria-label="Rename device"
-                      title="Rename device"
-                      onClick={startRename}
-                    >
-                      <EditIcon size={11} />
-                    </button>
-                  ) : null}
-                  {isEditingName ? (
-                    <input
-                      ref={renameInputRef}
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          void submitRename()
-                        }
-                        if (e.key === 'Escape') {
-                          e.preventDefault()
-                          clearNameEditing()
-                        }
-                      }}
-                      onBlur={() => void submitRename()}
-                      className="app-input flow-device-name-input"
-                    />
-                  ) : null}
-                </span>
-                {deviceType ? <span className="flow-device-type">{deviceType}</span> : null}
-                {displayDevice ? (
-                  <DeviceStatusIndicator
-                    device={displayDevice}
-                    showLabel
-                    className="flow-device-status"
-                  />
-                ) : null}
-              </div>
+              {displayDevice ? (
+                <DeviceCardContent
+                  device={displayDevice}
+                  compact
+                  thumbnailClassName="flow-device-thumb"
+                  thumbnailOverlay={
+                    canRemove ? (
+                      <Tooltip delay={300}>
+                        <Tooltip.Trigger className="flow-device-remove-anchor">
+                          <button
+                            type="button"
+                            className="flow-device-remove"
+                            aria-label="Remove device"
+                            onClick={() => {
+                              void handleRemoveDevice()
+                            }}
+                          >
+                            <TrashIcon size={8} />
+                          </button>
+                        </Tooltip.Trigger>
+                        <Tooltip.Content placement="top" showArrow>
+                          Remove device
+                        </Tooltip.Content>
+                      </Tooltip>
+                    ) : null
+                  }
+                  nameContent={
+                    <span className={`flow-device-name${isEditingName ? ' is-editing' : ''}`}>
+                      <span className="flow-device-name-label">{deviceName}</span>
+                      {canRename ? (
+                        <button
+                          type="button"
+                          className="flow-device-name-edit"
+                          aria-label="Rename device"
+                          title="Rename device"
+                          onClick={startRename}
+                        >
+                          <EditIcon size={9} />
+                        </button>
+                      ) : null}
+                      {isEditingName ? (
+                        <input
+                          ref={renameInputRef}
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              void submitRename()
+                            }
+                            if (e.key === 'Escape') {
+                              e.preventDefault()
+                              clearNameEditing()
+                            }
+                          }}
+                          onBlur={() => void submitRename()}
+                          className="app-input flow-device-name-input"
+                        />
+                      ) : null}
+                    </span>
+                  }
+                />
+              ) : (
+                <div className="flow-device-empty">
+                  <div className="flow-device-empty-thumb">
+                    <img src={imgUnknown} alt="" />
+                  </div>
+                  <div className="flow-device-empty-text">
+                    <span className="flow-device-name-label">No device</span>
+                    <span>No device paired</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <button

@@ -19,7 +19,7 @@ export default function DeviceStatusIndicator({
 
   return (
     <span
-      className={`inline-flex min-w-0 items-center gap-1 text-[10px] ${className}`}
+      className={`inline-flex min-w-0 items-center gap-1 text-[10px] leading-none ${className}`}
       title={status.label}
       aria-label={`Device status: ${status.label}`}
     >

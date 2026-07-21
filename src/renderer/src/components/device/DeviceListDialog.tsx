@@ -11,13 +11,11 @@ import {
   ModalHeading,
   toast
 } from '@heroui/react'
-import type { DeviceItem } from '../../types/device'
-import { resolveDeviceImage } from '../../utils/device/deviceImage'
 import { useDeviceStore } from '../../stores/deviceStore'
 import { useProjectStore } from '../../stores/projectStore'
 import { removeDeviceWithConfirm } from '../../utils/device/removeDeviceWithConfirm'
 import { DeviceIcon, EditIcon, TrashIcon, PlusIcon } from '../icons/Icons'
-import DeviceStatusIndicator from './DeviceStatusIndicator'
+import DeviceCardContent from './DeviceCardContent'
 
 interface DeviceListDialogProps {
   isOpen: boolean
@@ -26,33 +24,6 @@ interface DeviceListDialogProps {
   onPreviewDevice?: (deviceId: string) => void
   onAdd: () => void
   onClose: () => void
-}
-
-const DeviceThumb = ({ device }: { device: DeviceItem }): React.JSX.Element => {
-  return (
-    <div
-      className="relative flex-shrink-0 flex items-center justify-center rounded-xl overflow-visible"
-      style={{
-        width: 56,
-        height: 56,
-        padding: 6,
-        backgroundColor: 'var(--device-thumb-bg)',
-        border: '1px solid var(--device-thumb-border)'
-      }}
-    >
-      <DeviceStatusIndicator
-        device={device}
-        className="absolute left-0 top-0 rounded-full border-[1.5px] border-[var(--device-thumb-bg)] bg-[var(--device-thumb-bg)] pointer-events-none"
-      />
-      <div className="size-full overflow-hidden rounded-lg">
-        <img
-          src={resolveDeviceImage(device.type)}
-          alt={device.type}
-          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-        />
-      </div>
-    </div>
-  )
 }
 
 export default function DeviceListDialog({
@@ -197,46 +168,49 @@ export default function DeviceListDialog({
                           <TrashIcon size={12} />
                         </button>
 
-                        <button
-                          type="button"
-                          className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
-                          style={{ background: 'none', border: 'none', padding: 0 }}
-                          disabled={isEditing}
-                          onClick={() => {
-                            if (isEditing) return
-                            if (projectId) {
-                              void setProjectActiveDevice(projectId, d.id)
-                              return
-                            }
-                            onPreviewDevice?.(d.id)
-                          }}
-                        >
-                          <DeviceThumb device={d} />
-                          <div className="min-w-0 flex-1 pr-5">
-                            {isEditing ? (
-                              <input
-                                ref={renameInputRef}
-                                value={editingName}
-                                onChange={(e) => setEditingName(e.target.value)}
-                                onKeyDown={(e) => {
-                                  e.stopPropagation()
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault()
-                                    void submitRename(d.id, displayName)
-                                  }
-                                  if (e.key === 'Escape') {
-                                    e.preventDefault()
-                                    clearNameEditing()
-                                  }
-                                }}
-                                onBlur={() => void submitRename(d.id, displayName)}
-                                onMouseDown={stopCardAction}
-                                onPointerDown={stopCardAction}
-                                onClick={stopCardAction}
-                                className="app-input min-w-0 w-full text-[13px] text-center leading-none font-semibold mb-1.5"
-                              />
-                            ) : (
-                              <div className="mb-1.5">
+                        <div className="relative flex items-center gap-3 flex-1 min-w-0">
+                          <button
+                            type="button"
+                            className="absolute inset-0 z-0 cursor-pointer rounded-[inherit]"
+                            style={{ background: 'none', border: 'none', padding: 0 }}
+                            disabled={isEditing}
+                            aria-label={`${isActive ? 'Selected' : 'Select'} device ${displayName}`}
+                            aria-pressed={isActive}
+                            onClick={() => {
+                              if (projectId) {
+                                void setProjectActiveDevice(projectId, d.id)
+                                return
+                              }
+                              onPreviewDevice?.(d.id)
+                            }}
+                          />
+                          <DeviceCardContent
+                            device={d}
+                            className="relative z-[1] pr-5 pointer-events-none"
+                            nameContent={
+                              isEditing ? (
+                                <input
+                                  ref={renameInputRef}
+                                  value={editingName}
+                                  onChange={(e) => setEditingName(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    e.stopPropagation()
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault()
+                                      void submitRename(d.id, displayName)
+                                    }
+                                    if (e.key === 'Escape') {
+                                      e.preventDefault()
+                                      clearNameEditing()
+                                    }
+                                  }}
+                                  onBlur={() => void submitRename(d.id, displayName)}
+                                  onMouseDown={stopCardAction}
+                                  onPointerDown={stopCardAction}
+                                  onClick={stopCardAction}
+                                  className="app-input min-w-0 w-full text-center text-[13px] font-semibold leading-none pointer-events-auto"
+                                />
+                              ) : (
                                 <div className="relative inline-flex min-w-0 max-w-full">
                                   <span className="min-w-0 truncate text-[13px] leading-none font-semibold text-[var(--text-h)]">
                                     {displayName}
@@ -262,22 +236,10 @@ export default function DeviceListDialog({
                                     <EditIcon size={9} />
                                   </button>
                                 </div>
-                              </div>
-                            )}
-                            <div className="flex min-w-0 flex-col items-center gap-1">
-                              <span
-                                className="min-w-0 truncate text-[10px] px-1.5 py-0.5 rounded font-mono"
-                                style={{
-                                  backgroundColor: 'var(--accent-bg)',
-                                  color: 'var(--accent)'
-                                }}
-                              >
-                                {d.type}
-                              </span>
-                              <DeviceStatusIndicator device={d} showLabel />
-                            </div>
-                          </div>
-                        </button>
+                              )
+                            }
+                          />
+                        </div>
                       </div>
                     )
                   })}

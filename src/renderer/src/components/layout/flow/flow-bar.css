@@ -497,97 +497,92 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
   flex: 1;
   min-width: 0;
   max-width: 100%;
-  padding: 0px;
+  height: 52px;
+  padding: 0 8px;
 }
 
-.flow-device-thumb {
-  position: relative;
-  flex-shrink: 0;
+.flow-device-empty {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2px;
+  gap: 8px;
+  min-width: 0;
+}
+
+.flow-device-empty-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   width: 42px;
   height: 42px;
-  border-radius: 7px;
-  background: rgba(5, 7, 10, 0.06);
-  overflow: visible;
-}
-
-.flow-device-status-dot {
-  position: absolute;
-  left: -2px;
-  top: -2px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  border: 1.5px solid var(--flow-node-bg);
+  padding: 4px;
+  border-radius: 8px;
   box-sizing: border-box;
-  pointer-events: auto;
+  background: rgba(5, 7, 10, 0.06);
 }
 
-.flow-device-thumb img {
+.flow-device-empty-thumb img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   display: block;
-  border-radius: 7px;
 }
 
-.flow-device-text {
+.flow-device-empty-text {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 5px;
   min-width: 0;
-  line-height: 1.1;
+  font-size: 10px;
+  line-height: 1;
   text-align: center;
+  color: var(--text-muted);
 }
 
 .flow-device-name {
   position: relative;
-  display: flex;
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
   align-items: center;
   justify-content: center;
-  gap: 0;
-  max-width: 100%;
-  font-size: 14px;
-  font-weight: 700;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.flow-device-name.is-editing .flow-device-name-label,
-.flow-device-name.is-editing .flow-device-invalid {
+.flow-device-name.is-editing .flow-device-name-label {
   visibility: hidden;
-}
-
-.flow-device-name-label + .flow-device-invalid {
-  margin-left: 3px;
 }
 
 .flow-device-name-label {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .flow-device-name-edit {
   position: absolute;
-  inset: 0;
+  left: 100%;
+  top: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 13px;
+  height: 13px;
+  margin-left: 2px;
   padding: 0;
+  transform: translateY(-50%);
   border: none;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.5);
-  color: #fff;
+  background: transparent;
+  color: var(--text-muted);
   cursor: pointer;
   opacity: 0;
   pointer-events: none;
@@ -597,10 +592,10 @@
 }
 
 .flow-device-name-edit:hover {
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--input-bg-hover);
 }
 
-.flow-device-text:hover .flow-device-name-edit {
+.flow-device-info:hover .flow-device-name-edit {
   opacity: 1;
   pointer-events: auto;
 }
@@ -618,8 +613,9 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0 4px;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
   outline: none;
 }
 
@@ -636,29 +632,6 @@
 
 .app-input.flow-device-name-input:focus {
   border-color: var(--accent);
-}
-
-.flow-device-type {
-  max-width: 100%;
-  font-size: 11px;
-  font-weight: 500;
-  opacity: 0.55;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.flow-device-status {
-  max-width: 100%;
-  line-height: 1;
-}
-
-.flow-device-invalid {
-  flex-shrink: 0;
-  font-size: 10px;
-  font-weight: 600;
-  color: #c0392b;
-  opacity: 1;
 }
 
 .flow-arrow {
