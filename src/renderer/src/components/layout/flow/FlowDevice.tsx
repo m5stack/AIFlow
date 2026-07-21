@@ -8,8 +8,10 @@ import { useActiveProjectDevices } from '../../../hooks/useActiveProjectDevices'
 import { resolveDeviceImage, imgUnknown } from '../../../utils/device/deviceImage'
 import { runProjectOnDevice } from '../../../utils/device/runProjectOnDevice'
 import { removeDeviceWithConfirm } from '../../../utils/device/removeDeviceWithConfirm'
+import { getDeviceStatusPresentation } from '../../../utils/device/deviceStatus'
 import AddDeviceDialog from '../../device/AddDeviceDialog'
 import DeviceListDialog from '../../device/DeviceListDialog'
+import DeviceStatusIndicator from '../../device/DeviceStatusIndicator'
 import FirmwareFlashDialog from '../../device/FirmwareFlashDialog'
 import {
   ChevronLeftIcon,
@@ -25,7 +27,6 @@ import {
 export default function FlowDevice(): React.JSX.Element {
   const clientId = useClientIdStore((s) => s.clientId)
   const allDevices = useDeviceStore((s) => s.devices)
-  const fetchDevices = useDeviceStore((s) => s.fetchDevices)
   const unbindDevice = useDeviceStore((s) => s.unbindDevice)
   const renameDevice = useDeviceStore((s) => s.renameDevice)
 
@@ -52,10 +53,6 @@ export default function FlowDevice(): React.JSX.Element {
   const [editingName, setEditingName] = useState('')
   const [isRenaming, setIsRenaming] = useState(false)
   const renameInputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    void fetchDevices()
-  }, [fetchDevices])
 
   useEffect(() => {
     if (!activeProjectId || allDevices.length === 0) return
@@ -88,7 +85,6 @@ export default function FlowDevice(): React.JSX.Element {
   const canRemove =
     !!displayDevice?.id &&
     allDevices.some((d) => d.id === displayDevice.id) &&
-    !displayDevice.invalid &&
     !isRemoving
   const poolDevice = allDevices.find((d) => d.id === displayDevice?.id)
   const canRun = !!activeProjectId && !!selectedDevice?.id && !selectedDevice.invalid && !isRunning
@@ -111,14 +107,9 @@ export default function FlowDevice(): React.JSX.Element {
   const deviceName = !displayDevice ? 'No device' : displayDevice.name || displayDevice.type
   const deviceType = hasDevice ? displayDevice.type : ''
 
-  const isConnected = poolDevice?.status === 'connected' && !displayDevice?.invalid
-  const statusLabel = !displayDevice
-    ? 'No device paired'
-    : isConnected
-      ? 'Connected'
-      : displayDevice.invalid
-        ? 'Invalid'
-        : 'Disconnected'
+  const deviceStatus = displayDevice
+    ? getDeviceStatusPresentation(displayDevice)
+    : { label: 'No device paired', color: 'var(--status-disconnected)' }
 
   const clearNameEditing = (): void => {
     setIsEditingName(false)
@@ -233,15 +224,14 @@ export default function FlowDevice(): React.JSX.Element {
     <>
       <div className="flow-device-wrap">
         <div
-          className={`flow-device${
-            showGlow && deviceGlow === 'running'
+          className={`flow-device${showGlow && deviceGlow === 'running'
               ? ' flow-device-running'
               : showGlow && deviceGlow === 'success'
                 ? ' flow-device-success'
                 : showGlow && deviceGlow === 'failed'
                   ? ' flow-device-failed'
                   : ''
-          }`}
+            }`}
         >
           <div className="flow-device-left">
             <span className="flow-device-title">Device</span>
@@ -301,16 +291,15 @@ export default function FlowDevice(): React.JSX.Element {
                   <Tooltip.Trigger className="inline-flex">
                     <span
                       className="flow-device-status-dot"
-                      title={statusLabel}
+                      title={deviceStatus.label}
+                      aria-label={`Device status: ${deviceStatus.label}`}
                       style={{
-                        backgroundColor: isConnected
-                          ? 'var(--status-connected)'
-                          : 'var(--status-disconnected)'
+                        backgroundColor: deviceStatus.color
                       }}
                     />
                   </Tooltip.Trigger>
                   <Tooltip.Content placement="top" showArrow>
-                    {statusLabel}
+                    {deviceStatus.label}
                   </Tooltip.Content>
                 </Tooltip>
                 {canRemove ? (
@@ -369,6 +358,13 @@ export default function FlowDevice(): React.JSX.Element {
                   ) : null}
                 </span>
                 {deviceType ? <span className="flow-device-type">{deviceType}</span> : null}
+                {displayDevice ? (
+                  <DeviceStatusIndicator
+                    device={displayDevice}
+                    showLabel
+                    className="flow-device-status"
+                  />
+                ) : null}
               </div>
             </div>
 

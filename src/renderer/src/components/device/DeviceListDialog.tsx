@@ -17,6 +17,7 @@ import { useDeviceStore } from '../../stores/deviceStore'
 import { useProjectStore } from '../../stores/projectStore'
 import { removeDeviceWithConfirm } from '../../utils/device/removeDeviceWithConfirm'
 import { DeviceIcon, EditIcon, TrashIcon, PlusIcon } from '../icons/Icons'
+import DeviceStatusIndicator from './DeviceStatusIndicator'
 
 interface DeviceListDialogProps {
   isOpen: boolean
@@ -27,10 +28,7 @@ interface DeviceListDialogProps {
   onClose: () => void
 }
 
-const DeviceThumb = ({ type, status }: { type: string; status: DeviceItem['status'] }) => {
-  const isConnected = status === 'connected'
-  const statusLabel = isConnected ? 'Connected' : 'Disconnected'
-
+const DeviceThumb = ({ device }: { device: DeviceItem }): React.JSX.Element => {
   return (
     <div
       className="relative flex-shrink-0 flex items-center justify-center rounded-xl overflow-visible"
@@ -42,21 +40,14 @@ const DeviceThumb = ({ type, status }: { type: string; status: DeviceItem['statu
         border: '1px solid var(--device-thumb-border)'
       }}
     >
-      <span
-        className="absolute left-0 top-0 size-[9px] rounded-full box-border pointer-events-none"
-        style={{
-          border: '1.5px solid var(--device-thumb-bg)',
-          backgroundColor: isConnected
-            ? 'var(--status-connected)'
-            : 'var(--status-disconnected)'
-        }}
-        title={statusLabel}
-        aria-label={statusLabel}
+      <DeviceStatusIndicator
+        device={device}
+        className="absolute left-0 top-0 rounded-full border-[1.5px] border-[var(--device-thumb-bg)] bg-[var(--device-thumb-bg)] pointer-events-none"
       />
       <div className="size-full overflow-hidden rounded-lg">
         <img
-          src={resolveDeviceImage(type)}
-          alt={type}
+          src={resolveDeviceImage(device.type)}
+          alt={device.type}
           style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
         />
       </div>
@@ -220,7 +211,7 @@ export default function DeviceListDialog({
                             onPreviewDevice?.(d.id)
                           }}
                         >
-                          <DeviceThumb type={d.type} status={d.status} />
+                          <DeviceThumb device={d} />
                           <div className="min-w-0 flex-1 pr-5">
                             {isEditing ? (
                               <input
@@ -273,15 +264,18 @@ export default function DeviceListDialog({
                                 </div>
                               </div>
                             )}
-                            <span
-                              className="text-[10px] px-1.5 py-0.5 rounded font-mono"
-                              style={{
-                                backgroundColor: 'var(--accent-bg)',
-                                color: 'var(--accent)'
-                              }}
-                            >
-                              {d.type}
-                            </span>
+                            <div className="flex min-w-0 flex-col items-center gap-1">
+                              <span
+                                className="min-w-0 truncate text-[10px] px-1.5 py-0.5 rounded font-mono"
+                                style={{
+                                  backgroundColor: 'var(--accent-bg)',
+                                  color: 'var(--accent)'
+                                }}
+                              >
+                                {d.type}
+                              </span>
+                              <DeviceStatusIndicator device={d} showLabel />
+                            </div>
                           </div>
                         </button>
                       </div>

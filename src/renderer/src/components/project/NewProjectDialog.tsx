@@ -18,6 +18,7 @@ import { useClientIdStore } from '../../stores/clientIdStore'
 import { useDeviceStore } from '../../stores/deviceStore'
 import { useProjectStore } from '../../stores/projectStore'
 import { resolveDeviceImage } from '../../utils/device/deviceImage'
+import DeviceStatusIndicator from '../device/DeviceStatusIndicator'
 import { bindDevice } from '../../api/device'
 import { removeDeviceWithConfirm } from '../../utils/device/removeDeviceWithConfirm'
 import { DEFAULT_PROJECT_CODE } from '../../utils/project/defaultProjectCode'
@@ -35,7 +36,7 @@ interface NewProjectDialogProps {
   }) => boolean | Promise<boolean>
 }
 
-const DeviceThumb = ({ type }: { type: string }) => (
+const DeviceThumb = ({ type }: { type: string }): React.JSX.Element => (
   <div
     className="flex-shrink-0 flex items-center justify-center rounded-md overflow-hidden"
     style={{
@@ -278,6 +279,7 @@ export default function NewProjectDialog({
                                   {d.type}
                                 </div>
                               </div>
+                              <DeviceStatusIndicator device={d} showLabel />
                               <button
                                 className="flex-shrink-0 flex items-center justify-center rounded opacity-40 hover:opacity-100 transition-opacity cursor-pointer"
                                 style={{

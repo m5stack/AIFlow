@@ -4,6 +4,7 @@ import { useDeviceStore } from '../../../stores/deviceStore'
 import { ZapIcon } from '../../icons/Icons'
 import type { DeviceMode } from '../constants'
 import DeviceThumb from '../DeviceThumb'
+import DeviceStatusIndicator from '../../device/DeviceStatusIndicator'
 
 export interface DeviceStepProps {
   deviceMode: DeviceMode
@@ -132,6 +133,7 @@ export default function DeviceStep({
                   </div>
                   <div className="text-[11px] text-muted truncate">{d.type}</div>
                 </div>
+                <DeviceStatusIndicator device={d} showLabel />
               </button>
             )
           })}

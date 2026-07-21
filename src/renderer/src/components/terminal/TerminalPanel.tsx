@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useCallback } from 'react'
 import { Button } from '@heroui/react'
 import { ClearTerminalIcon } from '../icons/Icons'
-import { useDeviceStore } from '../../stores/deviceStore'
 import { useActiveProjectDevices } from '../../hooks/useActiveProjectDevices'
 import {
   useRealtimeTerminal,
@@ -36,7 +35,6 @@ function TerminalStatusDot({ status }: { status: RealtimeTerminalStatus }): Reac
 }
 
 export default function TerminalPanel(): React.JSX.Element {
-  const fetchDevices = useDeviceStore((state) => state.fetchDevices)
   const { activeProjectId, selectedDevice } = useActiveProjectDevices()
   const selectedDeviceId = selectedDevice?.id ?? ''
 
@@ -65,10 +63,6 @@ export default function TerminalPanel(): React.JSX.Element {
     if (isConnected) void disconnect()
     else void handleConnect()
   }
-
-  useEffect(() => {
-    void fetchDevices()
-  }, [fetchDevices])
 
   useEffect(() => {
     if (status === 'connected' && canAutoConnect) {

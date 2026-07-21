@@ -31,12 +31,15 @@ const persistClientId = (clientId: string): void => {
 
 interface ClientIdStoreState {
   clientId: string
+  isBootstrapped: boolean
   bootstrap: () => Promise<void>
 }
 
 export const useClientIdStore = create<ClientIdStoreState>((set, get) => ({
   clientId: getOrCreateClientId(),
+  isBootstrapped: false,
   bootstrap: async () => {
+    if (get().isBootstrapped) return
     try {
       const persisted = await window.ipc.clientId.get()
       const current = get().clientId
@@ -51,6 +54,8 @@ export const useClientIdStore = create<ClientIdStoreState>((set, get) => ({
       await window.ipc.clientId.set(current)
     } catch {
       // keep current value on IPC failure
+    } finally {
+      set({ isBootstrapped: true })
     }
   }
 }))
