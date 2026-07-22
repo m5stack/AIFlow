@@ -20,6 +20,7 @@ import {
 import { formatSkillBaseName, resolveSkillDisplayName } from '../../../../shared/skillDisplay'
 import { downloadSkill, getSkillList, type SkillItem as RemoteSkillItem } from '../../api/skill'
 import { DownloadIcon, RefreshIcon, TrashIcon } from '../icons/Icons'
+import { useConfirmDialog } from '../common/confirmDialogContext'
 
 type RowStatus = 'download' | 'update' | 'installed' | 'builtin-newer'
 
@@ -210,6 +211,7 @@ export default function BrowseSkillDialog({
   installedSkills,
   onChanged
 }: BrowseSkillDialogProps): React.JSX.Element {
+  const confirm = useConfirmDialog()
   const [remoteSkills, setRemoteSkills] = useState<RemoteSkillItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -311,7 +313,14 @@ export default function BrowseSkillDialog({
   const handleDelete = async (slug: string): Promise<void> => {
     if (busyFileName) return
     const skill = installedSkills.find((item) => item.slug === slug)
-    if (!skill || !window.confirm(`Delete skill "${skill.name}"?`)) return
+    if (!skill) return
+    const confirmed = await confirm({
+      title: 'Delete skill?',
+      description: 'This installed skill will be removed.',
+      itemName: skill.name,
+      confirmLabel: 'Delete'
+    })
+    if (!confirmed) return
 
     setBusyFileName(slug)
     setError(null)

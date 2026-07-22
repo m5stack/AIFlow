@@ -10,6 +10,7 @@ import AddDeviceDialog from '../../device/AddDeviceDialog'
 import DeviceCardContent from '../../device/DeviceCardContent'
 import DeviceListDialog from '../../device/DeviceListDialog'
 import FirmwareFlashDialog from '../../device/FirmwareFlashDialog'
+import { useConfirmDialog } from '../../common/confirmDialogContext'
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -22,6 +23,7 @@ import {
 } from '../../icons/Icons'
 
 export default function FlowDevice(): React.JSX.Element {
+  const confirm = useConfirmDialog()
   const allDevices = useDeviceStore((s) => s.devices)
   const unbindDevice = useDeviceStore((s) => s.unbindDevice)
   const renameDevice = useDeviceStore((s) => s.renameDevice)
@@ -140,6 +142,7 @@ export default function FlowDevice(): React.JSX.Element {
         deviceName: displayDevice.name || displayDevice.type,
         unbindDevice,
         clearActiveDeviceReferences,
+        confirm,
         onAfterRemove: () => {
           if (remaining.length === 0) return
           const nextIndex =

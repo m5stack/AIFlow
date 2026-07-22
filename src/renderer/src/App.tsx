@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import ConfirmDialogProvider from './components/common/ConfirmDialogProvider'
 import { OnboardingFlow } from './components/onboarding'
 import WorkspaceLayout from './components/layout/WorkspaceLayout'
 import { useDeviceStatusSubscription } from './hooks/useDeviceStatusSubscription'
@@ -47,9 +48,9 @@ export default function App(): React.JSX.Element {
   }, [])
 
   return (
-    <>
+    <ConfirmDialogProvider>
       <WorkspaceLayout />
       <OnboardingFlow />
-    </>
+    </ConfirmDialogProvider>
   )
 }

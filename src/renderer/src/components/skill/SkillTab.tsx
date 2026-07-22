@@ -6,6 +6,7 @@ import { findSkillUpdates, type SkillUpdateInfo } from '../../utils/skillUpdates
 import BrowseSkillDialog from './BrowseSkillDialog'
 import UpgradeSkillDialog from './UpgradeSkillDialog'
 import { DownloadIcon, PlusIcon, RefreshIcon, TrashIcon } from '../icons/Icons'
+import { useConfirmDialog } from '../common/confirmDialogContext'
 
 const CARD_ICON_SIZE = 'size-18'
 const CARD_WIDTH = 'w-18'
@@ -219,6 +220,7 @@ function BrowseSkillCard({
 }
 
 export default function SkillTab(): React.JSX.Element {
+  const confirm = useConfirmDialog()
   const [skills, setSkills] = useState<SkillItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isAdding, setIsAdding] = useState(false)
@@ -282,7 +284,14 @@ export default function SkillTab(): React.JSX.Element {
 
   const handleDelete = async (slug: string): Promise<void> => {
     const skill = skills.find((item) => item.slug === slug)
-    if (!skill || !window.confirm(`Delete skill "${skill.name}"?`)) return
+    if (!skill) return
+    const confirmed = await confirm({
+      title: 'Delete skill?',
+      description: 'This installed skill will be removed.',
+      itemName: skill.name,
+      confirmLabel: 'Delete'
+    })
+    if (!confirmed) return
 
     try {
       const nextSkills = await window.ipc.skill.delete(slug)

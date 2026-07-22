@@ -23,6 +23,7 @@ import { bindDevice } from '../../api/device'
 import { removeDeviceWithConfirm } from '../../utils/device/removeDeviceWithConfirm'
 import { DEFAULT_PROJECT_CODE } from '../../utils/project/defaultProjectCode'
 import { toast } from '@heroui/react'
+import { useConfirmDialog } from '../common/confirmDialogContext'
 
 type DeviceMode = 'select' | 'pair'
 
@@ -63,6 +64,7 @@ export default function NewProjectDialog({
   const devices = useDeviceStore((state) => state.devices)
   const unbindDevice = useDeviceStore((state) => state.unbindDevice)
   const clearActiveDeviceReferences = useProjectStore((state) => state.clearActiveDeviceReferences)
+  const confirm = useConfirmDialog()
   const clientId = useClientIdStore((state) => state.clientId)
   const fetchDevices = useDeviceStore((state) => state.fetchDevices)
   const [projectName, setProjectName] = useState('')
@@ -102,6 +104,7 @@ export default function NewProjectDialog({
         deviceName,
         unbindDevice,
         clearActiveDeviceReferences,
+        confirm,
         onAfterRemove: () => {
           if (selectedDeviceId === deviceId) setSelectedDeviceId('')
         }

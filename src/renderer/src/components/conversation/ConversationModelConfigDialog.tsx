@@ -24,6 +24,7 @@ import FieldExampleHints from '../model/FieldExampleHints'
 import ModelConnectionTestButton from '../model/ModelConnectionTestButton'
 import type { ChatModelOption } from '../../types/model'
 import { BASE_URL_EXAMPLES, MODEL_ID_EXAMPLES } from '../../utils/model/modelFieldExamples'
+import { useConfirmDialog } from '../common/confirmDialogContext'
 
 const DEFAULT_CUSTOM_MODEL_ID = 'claude-opus-4-7'
 
@@ -58,6 +59,7 @@ export default function ConversationModelConfigDialog({
   const [isDeletingModel, setIsDeletingModel] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
   const [testResult, setTestResult] = useState<ModelConnectionTestResult | null>(null)
+  const confirm = useConfirmDialog()
 
   const isBusy = isSavingModel || isDeletingModel || isTesting
 
@@ -149,7 +151,12 @@ export default function ConversationModelConfigDialog({
 
   const handleDeleteModel = async (): Promise<void> => {
     if (!model) return
-    const confirmed = window.confirm(`Delete model "${model.label}"?`)
+    const confirmed = await confirm({
+      title: 'Delete model?',
+      description: 'This model configuration will be removed from AIFlow.',
+      itemName: model.label,
+      confirmLabel: 'Delete'
+    })
     if (!confirmed) return
     setIsDeletingModel(true)
     try {

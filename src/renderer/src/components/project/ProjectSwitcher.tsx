@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react'
 import { Dropdown, Label } from '@heroui/react'
 import { ChevronDownIcon, EditIcon, PlusIcon, TrashIcon } from '../icons/Icons'
 import { useProjectStore } from '../../stores/projectStore'
+import { useConfirmDialog } from '../common/confirmDialogContext'
 
 interface ProjectSwitcherProps {
   onNewProject: () => void
@@ -15,6 +16,7 @@ export default function ProjectSwitcher({ onNewProject }: ProjectSwitcherProps):
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId)
   const renameProject = useProjectStore((s) => s.renameProject)
   const deleteProject = useProjectStore((s) => s.deleteProject)
+  const confirm = useConfirmDialog()
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -64,14 +66,19 @@ export default function ProjectSwitcher({ onNewProject }: ProjectSwitcherProps):
     })
   }
 
-  const handleDelete = (project: { id: string; projectName: string }): void => {
-    const message =
-      projects.length <= 1
-        ? `Delete project "${project.projectName}"? This is your last project.`
-        : `Delete project "${project.projectName}"?`
-    if (!window.confirm(message)) return
+  const handleDelete = async (project: { id: string; projectName: string }): Promise<void> => {
+    const confirmed = await confirm({
+      title: 'Delete project?',
+      description:
+        projects.length <= 1
+          ? 'The project and its files will be permanently deleted. This is your last project.'
+          : 'The project and its files will be permanently deleted.',
+      itemName: project.projectName,
+      confirmLabel: 'Delete'
+    })
+    if (!confirmed) return
     if (editingProjectId === project.id) clearEditing()
-    void deleteProject(project.id)
+    await deleteProject(project.id)
   }
 
   const stopItemAction = (event: React.SyntheticEvent): void => {
@@ -125,9 +132,9 @@ export default function ProjectSwitcher({ onNewProject }: ProjectSwitcherProps):
         onPointerDown={stopItemAction}
         onClick={(event) => {
           stopItemAction(event)
-          handleDelete(project)
+          void handleDelete(project)
         }}
-        onKeyDown={(event) => handleActionKeyDown(event, () => handleDelete(project))}
+        onKeyDown={(event) => handleActionKeyDown(event, () => void handleDelete(project))}
       >
         <TrashIcon size={12} />
       </span>

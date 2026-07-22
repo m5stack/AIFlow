@@ -9,6 +9,7 @@ import type {
 } from '../../../../shared/types'
 import ConversationModelConfigDialog from './ConversationModelConfigDialog'
 import type { ChatModelOption } from '../../types/model'
+import { useConfirmDialog } from '../common/confirmDialogContext'
 
 interface ConversationModelSelectorProps {
   models?: ChatModelOption[]
@@ -48,6 +49,7 @@ const ConversationModelSelector = forwardRef<
     model?: ChatModelOption
   }>({ isOpen: false, mode: 'create' })
   const [isDeletingModel, setIsDeletingModel] = useState(false)
+  const confirm = useConfirmDialog()
 
   const selectedModelConfig = models.find((model) => model.id === selectedModel)
   const selectedModelKeys: Selection = selectedModel ? new Set([selectedModel]) : new Set()
@@ -74,7 +76,12 @@ const ConversationModelSelector = forwardRef<
 
   const handleDeleteModelById = async (model: ChatModelOption): Promise<void> => {
     if (!model.isUserModel) return
-    const confirmed = window.confirm(`Delete model "${model.label}"?`)
+    const confirmed = await confirm({
+      title: 'Delete model?',
+      description: 'This model configuration will be removed from AIFlow.',
+      itemName: model.label,
+      confirmLabel: 'Delete'
+    })
     if (!confirmed) return
     setIsDeletingModel(true)
     try {

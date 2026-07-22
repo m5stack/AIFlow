@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import type { McpServerItem } from '../../../../shared/types'
 import AddMcpServerDialog from './AddMcpServerDialog'
 import { EditIcon, McpIcon, PlusIcon, TrashIcon } from '../icons/Icons'
+import { useConfirmDialog } from '../common/confirmDialogContext'
 
 const serverSummary = (server: McpServerItem): string => {
   if (server.transport === 'stdio') {
@@ -54,6 +55,7 @@ function McpServerRow({
 }
 
 export default function McpTab(): React.JSX.Element {
+  const confirm = useConfirmDialog()
   const [servers, setServers] = useState<McpServerItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -78,7 +80,14 @@ export default function McpTab(): React.JSX.Element {
 
   const handleDelete = async (serverId: string): Promise<void> => {
     const server = servers.find((item) => item.id === serverId)
-    if (!server || !window.confirm(`Delete MCP server "${server.name}"?`)) return
+    if (!server) return
+    const confirmed = await confirm({
+      title: 'Delete MCP server?',
+      description: 'This server configuration will be permanently removed.',
+      itemName: server.name,
+      confirmLabel: 'Delete'
+    })
+    if (!confirmed) return
 
     setError(null)
     const previousServers = servers

@@ -4,6 +4,7 @@ import PanelShell from '../layout/PanelShell'
 import { useProjectStore } from '../../stores/projectStore'
 import { flattenProjectFiles } from '../../utils/project/flattenProjectFiles'
 import { fileKindFromPath } from '../../utils/project/fileKind'
+import { useConfirmDialog } from '../common/confirmDialogContext'
 
 export default function FilePanel(): React.JSX.Element {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
@@ -12,6 +13,7 @@ export default function FilePanel(): React.JSX.Element {
   const selectProjectFile = useProjectStore((s) => s.selectProjectFile)
   const importProjectResource = useProjectStore((s) => s.importProjectResource)
   const deleteProjectFile = useProjectStore((s) => s.deleteProjectFile)
+  const confirm = useConfirmDialog()
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -32,6 +34,18 @@ export default function FilePanel(): React.JSX.Element {
     void importProjectResource(activeProjectId, file)
   }
 
+  const handleDeleteFile = async (filePath: string): Promise<void> => {
+    if (!activeProjectId) return
+    const confirmed = await confirm({
+      title: 'Delete project file?',
+      description: 'This file will be permanently deleted from the project.',
+      itemName: filePath,
+      confirmLabel: 'Delete'
+    })
+    if (!confirmed) return
+    await deleteProjectFile(activeProjectId, filePath)
+  }
+
   return (
     <PanelShell
       title="File"
@@ -49,12 +63,7 @@ export default function FilePanel(): React.JSX.Element {
       }
       bodyClassName="overflow-y-auto p-3.5"
     >
-      <input
-        ref={fileInputRef}
-        type="file"
-        className="hidden"
-        onChange={handleFileInputChange}
-      />
+      <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileInputChange} />
 
       <div className="grid gap-2">
         {!activeProject ? (
@@ -92,11 +101,7 @@ export default function FilePanel(): React.JSX.Element {
                     type="button"
                     className="inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-[#ff6b6b] opacity-0 transition-all hover:bg-soft group-hover:opacity-100"
                     aria-label={`Delete ${file.name}`}
-                    onClick={() => {
-                      if (!activeProjectId) return
-                      if (!window.confirm(`Delete ${file.name}?`)) return
-                      void deleteProjectFile(activeProjectId, file.path)
-                    }}
+                    onClick={() => void handleDeleteFile(file.path)}
                   >
                     <TrashIcon size={12} />
                   </button>

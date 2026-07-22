@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from '@heroui/react'
 import { deleteDeviceFile, getDeviceFileTree } from '../../api/device'
 import type { DeviceFile, DeviceFileTreeNode } from '../../types/device'
 import { useActiveProjectDevices } from '../../hooks/useActiveProjectDevices'
@@ -7,7 +8,15 @@ import { useDeviceFilePreviewStore } from '../../stores/deviceFilePreviewStore'
 import { useDeviceFileTreeStore } from '../../stores/deviceFileTreeStore'
 import { useDeviceStore } from '../../stores/deviceStore'
 import { isImagePath } from '../../../../shared/fileExtensions'
-import { ChevronLeftIcon, CodeIcon, FolderIcon, ImageIcon, RefreshIcon, TrashIcon } from '../icons/Icons'
+import {
+  ChevronLeftIcon,
+  CodeIcon,
+  FolderIcon,
+  ImageIcon,
+  RefreshIcon,
+  TrashIcon
+} from '../icons/Icons'
+import { useConfirmDialog } from '../common/confirmDialogContext'
 
 const ROOT_PATH = ''
 
@@ -26,7 +35,10 @@ const parentPath = (path: string): string => {
 const buildFilePath = (dirPath: string, fileName: string): string =>
   dirPath ? `${dirPath}/${fileName}` : fileName
 
-const resolveTreeNode = (tree: DeviceFileTreeNode | null, path: string): DeviceFileTreeNode | null => {
+const resolveTreeNode = (
+  tree: DeviceFileTreeNode | null,
+  path: string
+): DeviceFileTreeNode | null => {
   if (!tree) return null
   if (!path) return tree
 
@@ -61,6 +73,7 @@ export default function DeviceFilesTab(): React.JSX.Element {
   const storeRootFsPath = useDeviceFileTreeStore((s) => s.rootFsPath)
   const setDeviceFileTree = useDeviceFileTreeStore((s) => s.setTree)
   const clearDeviceFileTree = useDeviceFileTreeStore((s) => s.clear)
+  const confirm = useConfirmDialog()
 
   const displayDevice = useMemo(() => {
     if (selectedDevice && !selectedDevice.invalid) return selectedDevice
@@ -152,10 +165,16 @@ export default function DeviceFilesTab(): React.JSX.Element {
 
   const handleDelete = async (fileName: string): Promise<void> => {
     if (!displayDevice?.id || deletingFile) return
-    if (!window.confirm(`Delete ${fileName}?`)) return
-
     const previewFilePath = buildFilePath(fsPath, fileName)
     const deleteFilePath = buildFilePath(currentPath, fileName)
+    const confirmed = await confirm({
+      title: 'Delete device file?',
+      description: 'This file will be permanently deleted from the device.',
+      itemName: previewFilePath,
+      confirmLabel: 'Delete'
+    })
+    if (!confirmed) return
+
     setDeletingFile(fileName)
     try {
       await deleteDeviceFile({
@@ -168,7 +187,8 @@ export default function DeviceFilesTab(): React.JSX.Element {
       }
       handleRefresh()
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Failed to delete file')
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      toast.danger(`Delete device file failed: ${message}`)
     } finally {
       setDeletingFile(null)
     }

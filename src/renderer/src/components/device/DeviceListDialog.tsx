@@ -16,6 +16,7 @@ import { useProjectStore } from '../../stores/projectStore'
 import { removeDeviceWithConfirm } from '../../utils/device/removeDeviceWithConfirm'
 import { DeviceIcon, EditIcon, TrashIcon, PlusIcon } from '../icons/Icons'
 import DeviceCardContent from './DeviceCardContent'
+import { useConfirmDialog } from '../common/confirmDialogContext'
 
 interface DeviceListDialogProps {
   isOpen: boolean
@@ -41,6 +42,7 @@ export default function DeviceListDialog({
   const projects = useProjectStore((state) => state.projects)
   const setProjectActiveDevice = useProjectStore((state) => state.setProjectActiveDevice)
   const clearActiveDeviceReferences = useProjectStore((state) => state.clearActiveDeviceReferences)
+  const confirm = useConfirmDialog()
   const [removingId, setRemovingId] = useState('')
   const [editingDeviceId, setEditingDeviceId] = useState('')
   const [editingName, setEditingName] = useState('')
@@ -62,7 +64,8 @@ export default function DeviceListDialog({
         deviceId,
         deviceName,
         unbindDevice,
-        clearActiveDeviceReferences
+        clearActiveDeviceReferences,
+        confirm
       })
     } finally {
       setRemovingId('')
