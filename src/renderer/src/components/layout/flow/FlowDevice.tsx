@@ -3,9 +3,11 @@ import { Button, Checkbox, Tooltip, toast } from '@heroui/react'
 import { useDeviceStore } from '../../../stores/deviceStore'
 import { useProjectStore } from '../../../stores/projectStore'
 import { useFlowStatusStore } from '../../../stores/flowStatusStore'
+import { useClientIdStore } from '../../../stores/clientIdStore'
 import { useActiveProjectDevices } from '../../../hooks/useActiveProjectDevices'
 import { imgUnknown } from '../../../utils/device/deviceImage'
 import { removeDeviceWithConfirm } from '../../../utils/device/removeDeviceWithConfirm'
+import { sendProjectToDevice } from '../../../utils/device/projectDeviceTransfer'
 import AddDeviceDialog from '../../device/AddDeviceDialog'
 import DeviceCardContent from '../../device/DeviceCardContent'
 import DeviceListDialog from '../../device/DeviceListDialog'
@@ -24,6 +26,7 @@ import {
 
 export default function FlowDevice(): React.JSX.Element {
   const confirm = useConfirmDialog()
+  const clientId = useClientIdStore((s) => s.clientId)
   const allDevices = useDeviceStore((s) => s.devices)
   const unbindDevice = useDeviceStore((s) => s.unbindDevice)
   const renameDevice = useDeviceStore((s) => s.renameDevice)
@@ -32,7 +35,10 @@ export default function FlowDevice(): React.JSX.Element {
   const clearActiveDeviceReferences = useProjectStore((s) => s.clearActiveDeviceReferences)
   const autoRunAfterChatEnabled = useProjectStore((s) => s.autoRunAfterChatEnabled)
   const setAutoRunAfterChatEnabled = useProjectStore((s) => s.setAutoRunAfterChatEnabled)
+  const codeFilePath = useProjectStore((s) => s.codeFilePath)
+  const selectedFileContent = useProjectStore((s) => s.selectedFileContent)
   const deviceGlow = useFlowStatusStore((s) => s.device)
+  const setDeviceGlow = useFlowStatusStore((s) => s.setDevice)
   const talk = useFlowStatusStore((s) => s.talk)
   const showGlow = !talk && deviceGlow !== 'idle'
 
@@ -46,6 +52,7 @@ export default function FlowDevice(): React.JSX.Element {
   const [isEditingName, setIsEditingName] = useState(false)
   const [editingName, setEditingName] = useState('')
   const [isRenaming, setIsRenaming] = useState(false)
+  const [isSending, setIsSending] = useState(false)
   const renameInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -81,6 +88,12 @@ export default function FlowDevice(): React.JSX.Element {
   const poolDevice = allDevices.find((d) => d.id === displayDevice?.id)
   const canRename =
     hasDevice && !!displayDevice?.id && !displayDevice.invalid && !!poolDevice && !isRenaming
+  const canSend =
+    !!activeProjectId &&
+    !!activeProject &&
+    !!selectedDevice?.id &&
+    !selectedDevice.invalid &&
+    !isSending
 
   const cycleDevice = (delta: -1 | 1): void => {
     if (!canCycle) return
@@ -159,6 +172,44 @@ export default function FlowDevice(): React.JSX.Element {
       if (!removed) return
     } finally {
       setIsRemoving(false)
+    }
+  }
+
+  const handleSendToDevice = async (): Promise<void> => {
+    if (
+      !activeProjectId ||
+      !activeProject ||
+      !selectedDevice?.id ||
+      selectedDevice.invalid ||
+      isSending
+    ) {
+      return
+    }
+
+    setIsSending(true)
+    setDeviceGlow('running')
+    try {
+      const { sent } = await sendProjectToDevice({
+        projectId: activeProjectId,
+        projectName: activeProject.projectName,
+        deviceId: selectedDevice.id,
+        clientId,
+        fileNodes: activeProject.files ?? [],
+        selectedPath: codeFilePath ?? undefined,
+        selectedContent: selectedFileContent
+      })
+      if (!sent) {
+        setDeviceGlow('idle')
+        toast.danger('No code to send. Add main.py content first.')
+        return
+      }
+      setDeviceGlow('success')
+      toast.success('Project sent to device.')
+    } catch (error) {
+      setDeviceGlow('failed')
+      toast.danger(`Send failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsSending(false)
     }
   }
 
@@ -316,9 +367,14 @@ export default function FlowDevice(): React.JSX.Element {
         </div>
 
         <div className="flow-device-side">
-          <Button size="sm" className="flow-device-run flow-device-run-device">
+          <Button
+            size="sm"
+            className="flow-device-run flow-device-run-device"
+            isDisabled={!canSend}
+            onPress={() => void handleSendToDevice()}
+          >
             <SendIcon size={12} />
-            Send to device
+            {isSending ? 'Sending…' : 'Send to device'}
           </Button>
           <Button
             size="sm"

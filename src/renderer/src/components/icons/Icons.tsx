@@ -31,6 +31,7 @@ import {
   FaWandMagicSparkles,
   FaXmark
 } from 'react-icons/fa6'
+import { HiOutlineRocketLaunch } from 'react-icons/hi2'
 import type { IconType } from 'react-icons'
 
 export interface IconProps {
@@ -53,6 +54,7 @@ export const ChevronRightIcon = icon(FaChevronRight)
 export const ArrowRightIcon = icon(FaArrowRightLong)
 export const SettingsIcon = icon(FaGear, 20)
 export const PlayIcon = icon(FaPlay)
+export const StartupFileIcon = icon(HiOutlineRocketLaunch)
 export const StopIcon = icon(FaStop)
 export const ClearTerminalIcon = icon(FaEraser)
 export const ChatBubbleIcon = icon(FaComment)

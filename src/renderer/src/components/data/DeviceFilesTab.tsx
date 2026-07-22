@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { toast } from '@heroui/react'
+import { Tooltip, toast } from '@heroui/react'
 import { deleteDeviceFile, getDeviceFileTree } from '../../api/device'
 import type { DeviceFile, DeviceFileTreeNode } from '../../types/device'
 import { useActiveProjectDevices } from '../../hooks/useActiveProjectDevices'
@@ -8,12 +8,14 @@ import { useDeviceFilePreviewStore } from '../../stores/deviceFilePreviewStore'
 import { useDeviceFileTreeStore } from '../../stores/deviceFileTreeStore'
 import { useDeviceStore } from '../../stores/deviceStore'
 import { isImagePath } from '../../../../shared/fileExtensions'
+import { setDeviceStartupFile } from '../../utils/device/setDeviceStartupFile'
 import {
   ChevronLeftIcon,
   CodeIcon,
   FolderIcon,
   ImageIcon,
   RefreshIcon,
+  StartupFileIcon,
   TrashIcon
 } from '../icons/Icons'
 import { useConfirmDialog } from '../common/confirmDialogContext'
@@ -34,6 +36,9 @@ const parentPath = (path: string): string => {
 
 const buildFilePath = (dirPath: string, fileName: string): string =>
   dirPath ? `${dirPath}/${fileName}` : fileName
+
+const isAppsPythonFile = (dirPath: string, fileName: string): boolean =>
+  (dirPath === 'apps' || dirPath.startsWith('apps/')) && fileName.toLowerCase().endsWith('.py')
 
 const resolveTreeNode = (
   tree: DeviceFileTreeNode | null,
@@ -85,6 +90,7 @@ export default function DeviceFilesTab(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
   const [deletingFile, setDeletingFile] = useState<string | null>(null)
+  const [settingStartupFile, setSettingStartupFile] = useState<string | null>(null)
 
   const tree = storeDeviceId === displayDevice?.id ? storeTree : null
   const rootFsPath = storeDeviceId === displayDevice?.id ? storeRootFsPath : ''
@@ -164,7 +170,7 @@ export default function DeviceFilesTab(): React.JSX.Element {
   }
 
   const handleDelete = async (fileName: string): Promise<void> => {
-    if (!displayDevice?.id || deletingFile) return
+    if (!displayDevice?.id || deletingFile || settingStartupFile) return
     const previewFilePath = buildFilePath(fsPath, fileName)
     const deleteFilePath = buildFilePath(currentPath, fileName)
     const confirmed = await confirm({
@@ -194,6 +200,27 @@ export default function DeviceFilesTab(): React.JSX.Element {
     }
   }
 
+  const handleSetStartupFile = async (fileName: string): Promise<void> => {
+    if (!displayDevice?.id || deletingFile || settingStartupFile) return
+    const filePath = buildFilePath(fsPath, fileName)
+
+    setSettingStartupFile(filePath)
+    try {
+      await setDeviceStartupFile({
+        deviceId: displayDevice.id,
+        clientId,
+        filePath,
+        fileName
+      })
+      toast.success(`"${fileName}" set as device startup code.`)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      toast.danger(`Set startup code failed: ${message}`)
+    } finally {
+      setSettingStartupFile(null)
+    }
+  }
+
   const showStatus = !displayDevice?.id || isLoading || !!error || sortedFileList.length === 0
 
   const renderStatus = (): React.ReactNode => {
@@ -217,7 +244,9 @@ export default function DeviceFilesTab(): React.JSX.Element {
       {sortedFileList.map((file) => {
         const filePath = buildFilePath(fsPath, file.name)
         const isActive = selectedDeviceFilePath === filePath
-        const isDeleting = deletingFile === file.name
+        const canSetAsStartup = !file.isDirectory && isAppsPythonFile(currentPath, file.name)
+        const isSettingStartup = settingStartupFile === filePath
+        const isFileOperationPending = deletingFile !== null || settingStartupFile !== null
         return (
           <div
             key={file.name}
@@ -250,11 +279,35 @@ export default function DeviceFilesTab(): React.JSX.Element {
                 >
                   {file.name}
                 </button>
+                {canSetAsStartup ? (
+                  <Tooltip delay={300}>
+                    <Tooltip.Trigger className="inline-flex shrink-0">
+                      <span className="inline-flex">
+                        <button
+                          type="button"
+                          className="inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-accent opacity-0 transition-all hover:bg-soft group-hover:opacity-100 focus-visible:opacity-100 disabled:cursor-not-allowed disabled:opacity-40"
+                          aria-label={`Set ${file.name} as startup code`}
+                          disabled={isFileOperationPending}
+                          onClick={() => void handleSetStartupFile(file.name)}
+                        >
+                          {isSettingStartup ? (
+                            <RefreshIcon size={12} className="animate-spin" />
+                          ) : (
+                            <StartupFileIcon size={14} />
+                          )}
+                        </button>
+                      </span>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content placement="top" showArrow>
+                      Set as startup code
+                    </Tooltip.Content>
+                  </Tooltip>
+                ) : null}
                 <button
                   type="button"
                   className="inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-[#ff6b6b] opacity-0 transition-all hover:bg-soft group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-40"
                   aria-label={`Delete ${file.name}`}
-                  disabled={isDeleting}
+                  disabled={isFileOperationPending}
                   onClick={() => void handleDelete(file.name)}
                 >
                   <TrashIcon size={12} />

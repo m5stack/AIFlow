@@ -1,22 +1,11 @@
-import type { ProjectFileNode } from '../../types/project'
-import { downloadCode, downloadFiles, pushCode } from '../../api/device'
+import { downloadCode, pushCode } from '../../api/device'
+import { buildMainPyFile } from '../project/projectRunFiles'
 import {
-  buildDeviceAppFile,
-  buildDeviceFiles,
-  buildMainPyFile,
-  getMainPyContent
-} from '../project/projectRunFiles'
+  transferProjectFilesToDevice,
+  type ProjectDeviceTransferArgs
+} from './projectDeviceTransfer'
 
-export interface RunProjectOnDeviceArgs {
-  projectId: string
-  projectName: string
-  deviceId: string
-  clientId: string
-  fileNodes: ProjectFileNode[]
-  /** Path of the file currently open in the editor, used to prefer in-memory content. */
-  selectedPath?: string
-  /** In-memory content for the selected file. */
-  selectedContent?: string
+export interface RunProjectOnDeviceArgs extends ProjectDeviceTransferArgs {
   /** When true, saves main.py under apps and runs it via the download-code API. */
   includeMainPyInDownload?: boolean
 }
@@ -36,45 +25,13 @@ export interface RunProjectOnDeviceResult {
 export const runProjectOnDevice = async (
   args: RunProjectOnDeviceArgs
 ): Promise<RunProjectOnDeviceResult> => {
-  const {
-    projectId,
-    projectName,
-    deviceId,
-    clientId,
-    fileNodes,
-    selectedPath,
-    selectedContent = '',
-    includeMainPyInDownload = false
-  } = args
-
-  const mainPyContent = (await getMainPyContent(projectId, selectedPath, selectedContent)).trim()
+  const { deviceId, clientId, includeMainPyInDownload = false } = args
+  const { mainPyContent } = await transferProjectFilesToDevice(args, {
+    includeAppFile: includeMainPyInDownload
+  })
 
   if (!mainPyContent) {
     return { mainPyContent: '', ran: false }
-  }
-
-  const { files: nonMainFiles, filePaths: nonMainFilePaths } = await buildDeviceFiles(
-    projectId,
-    fileNodes,
-    selectedPath,
-    selectedContent
-  )
-  const filesToDownload = [...nonMainFiles]
-  const filePathsToDownload = [...nonMainFilePaths]
-
-  if (includeMainPyInDownload) {
-    const appFile = buildDeviceAppFile(projectName, mainPyContent)
-    filesToDownload.push(appFile.file)
-    filePathsToDownload.push(appFile.filePath)
-  }
-
-  if (filesToDownload.length > 0) {
-    await downloadFiles({
-      files: filesToDownload,
-      filePaths: filePathsToDownload.join(','),
-      deviceId,
-      clientId
-    })
   }
 
   if (includeMainPyInDownload) {
