@@ -154,15 +154,16 @@ export default function DeviceFilesTab(): React.JSX.Element {
     if (!displayDevice?.id || deletingFile) return
     if (!window.confirm(`Delete ${fileName}?`)) return
 
-    const filePath = buildFilePath(fsPath, fileName)
+    const previewFilePath = buildFilePath(fsPath, fileName)
+    const deleteFilePath = buildFilePath(currentPath, fileName)
     setDeletingFile(fileName)
     try {
       await deleteDeviceFile({
         deviceId: displayDevice.id,
         clientId,
-        filePath
+        filePath: deleteFilePath
       })
-      if (selectedDeviceFilePath === filePath) {
+      if (selectedDeviceFilePath === previewFilePath) {
         clearPreview()
       }
       handleRefresh()
