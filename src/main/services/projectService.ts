@@ -16,6 +16,7 @@ import type {
   ProjectManifest
 } from '../../shared/types'
 import { languageByExtension, mimeByExtension } from '../../shared/fileExtensions'
+import { deviceAbsolutePathForProjectFile } from '../../shared/devicePaths'
 import { SkillService } from './skillService'
 
 const PROJECTS_DIR_NAME = 'projects'
@@ -44,15 +45,12 @@ const resourceLabelForFile = (filePath: string, language?: string): string | und
   return undefined
 }
 
-const devicePathForProjectFile = (projectRelativePath: string): string =>
-  `/flash/res/${projectRelativePath.replace(/^\/+/, '')}`
-
 /** Device code path for images/audio — always under /flash/res/img/ or /flash/res/audio/. */
 const codePathForResource = (filePath: string, label: string): string => {
   const filename = basename(filePath)
   if (label === 'image') return `/flash/res/img/${filename}`
   if (label === 'audio') return `/flash/res/audio/${filename}`
-  return devicePathForProjectFile(filePath)
+  return deviceAbsolutePathForProjectFile(filePath)
 }
 
 const DEVICE_RESOURCE_RULES_CRITICAL = [

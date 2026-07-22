@@ -1,4 +1,5 @@
 import type { ProjectFileNode } from '../../types/project'
+import { deviceRelativePathForProjectFile } from '../../../../shared/devicePaths'
 import { collectProjectFileNodes } from './flattenProjectFiles'
 
 export const MAIN_PY_PATH = 'main.py'
@@ -56,19 +57,26 @@ const resolveFileBlob = async (
 export const buildMainPyFile = (content: string): File =>
   new File([content], MAIN_OTA_TEMP_PATH, { type: 'text/plain' })
 
+export interface DeviceFileBatch {
+  files: File[]
+  filePaths: string[]
+}
+
 export const buildDeviceFiles = async (
   projectId: string,
   fileNodes: ProjectFileNode[],
   selectedPath: string | undefined,
   selectedContent: string
-): Promise<File[]> => {
+): Promise<DeviceFileBatch> => {
   const nodes = collectProjectFileNodes(fileNodes).filter((node) => !isMainPyFile(node))
   const files: File[] = []
+  const filePaths: string[] = []
 
   for (const node of nodes) {
     const blob = await resolveFileBlob(projectId, node, selectedPath, selectedContent)
     files.push(new File([blob], node.name, { type: blob.type || 'application/octet-stream' }))
+    filePaths.push(deviceRelativePathForProjectFile(node.path))
   }
 
-  return files
+  return { files, filePaths }
 }

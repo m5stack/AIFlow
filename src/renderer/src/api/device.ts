@@ -31,13 +31,21 @@ export interface RenameDevicePayload {
   name: string
 }
 
+export interface DownloadFilesParams {
+  files: File[]
+  filePaths: string
+  deviceId: string
+  clientId?: string
+}
+
 export { normalizeDeviceItem, normalizeDeviceList }
 
 async function uploadBatchAndPush(
   path: string,
   files: File[],
   deviceId: string,
-  clientId?: string
+  clientId?: string,
+  filePaths?: string
 ): Promise<void> {
   const formData = new FormData()
   for (const file of files) {
@@ -45,6 +53,7 @@ async function uploadBatchAndPush(
   }
   formData.append('deviceId', deviceId)
   if (clientId) formData.append('clientId', clientId)
+  if (filePaths !== undefined) formData.append('filePaths', filePaths)
   await http.post(path, formData)
 }
 
@@ -73,11 +82,13 @@ export const pushCode = async (deviceId: string, message: string): Promise<void>
   })
 }
 
-export const downloadFiles = async (
-  files: File[],
-  deviceId: string,
-  clientId?: string
-): Promise<void> => uploadBatchAndPush(API_PATH.downloadFiles, files, deviceId, clientId)
+export const downloadFiles = async ({
+  files,
+  filePaths,
+  deviceId,
+  clientId
+}: DownloadFilesParams): Promise<void> =>
+  uploadBatchAndPush(API_PATH.downloadFiles, files, deviceId, clientId, filePaths)
 
 export const downloadCode = async (
   files: File[],
@@ -85,18 +96,17 @@ export const downloadCode = async (
   clientId?: string
 ): Promise<void> => uploadBatchAndPush(API_PATH.downloadCode, files, deviceId, clientId)
 
-
 export const getDeviceFileTree = async (payload: {
-  deviceId: string,
-  clientId: string,
+  deviceId: string
+  clientId: string
 }): Promise<DeviceFileTreeResponse> => {
   const { data } = await http.postForm(API_PATH.deviceFileTree, payload)
   return data
 }
 
 export const previewDeviceFile = async (payload: {
-  deviceId: string,
-  clientId: string,
+  deviceId: string
+  clientId: string
   filePath: string
 }): Promise<DeviceFilePreviewResponse> => {
   const { data } = await http.postForm(API_PATH.previewDeviceFile, payload)
@@ -104,8 +114,8 @@ export const previewDeviceFile = async (payload: {
 }
 
 export const deleteDeviceFile = async (payload: {
-  deviceId: string,
-  clientId: string,
+  deviceId: string
+  clientId: string
   filePath: string
 }): Promise<void> => {
   await http.postForm(API_PATH.deleteDeviceFile, payload)

@@ -46,16 +46,24 @@ export const runProjectOnDevice = async (
     return { mainPyContent: '', ran: false }
   }
 
-  const nonMainFiles = await buildDeviceFiles(projectId, fileNodes, selectedPath, selectedContent)
+  const { files: nonMainFiles, filePaths: nonMainFilePaths } = await buildDeviceFiles(
+    projectId,
+    fileNodes,
+    selectedPath,
+    selectedContent
+  )
+
+  if (nonMainFiles.length > 0) {
+    await downloadFiles({
+      files: nonMainFiles,
+      filePaths: nonMainFilePaths.join(','),
+      deviceId,
+      clientId
+    })
+  }
 
   if (includeMainPyInDownload) {
-    if (nonMainFiles.length > 0) {
-      await downloadFiles(nonMainFiles, deviceId, clientId)
-    }
     await downloadCode([buildMainPyFile(mainPyContent)], deviceId, clientId)
-  } else if (nonMainFiles.length > 0) {
-    await downloadFiles(nonMainFiles, deviceId, clientId)
-    await pushCode(deviceId, mainPyContent)
   } else {
     await pushCode(deviceId, mainPyContent)
   }
