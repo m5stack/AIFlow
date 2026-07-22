@@ -1,5 +1,5 @@
 import React from 'react'
-import { ChatBubbleIcon } from '../icons/Icons'
+import { ChatBubbleIcon, ChevronDownIcon } from '../icons/Icons'
 import ConversationMessage from './ConversationMessage'
 import ConversationEmptyState from './ConversationEmptyState'
 import ConversationThinkingIndicator from './ConversationThinkingIndicator'
@@ -38,8 +38,10 @@ export default function ConversationThreadPanel({
     mergeAssistantParts
   } = session
 
-  const { scrollContainerRef, messagesEndRef } = useChatAutoScroll({
+  const { scrollContainerRef, handleScroll, showJumpToLatest, jumpToLatest } = useChatAutoScroll({
     active: autoScrollActive,
+    enabled: !hasNoProject && !isEmptyConversation,
+    resetKey: selectedConvId,
     deps: [session.messages, activityLabel, selectedConvId]
   })
 
@@ -70,7 +72,7 @@ export default function ConversationThreadPanel({
         />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div className="relative min-h-0 flex-1 overflow-hidden">
         {hasNoProject ? (
           <ConversationEmptyState onCreateProject={() => setShowNewProjectDialog(true)} />
         ) : isEmptyConversation ? (
@@ -84,7 +86,13 @@ export default function ConversationThreadPanel({
             </div>
           </div>
         ) : (
-          <div ref={scrollContainerRef} className="h-full overflow-y-auto p-2">
+          <div
+            ref={scrollContainerRef}
+            className="h-full overflow-y-auto p-2 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+            tabIndex={0}
+            aria-label="Conversation messages"
+            onScroll={handleScroll}
+          >
             <div className="flex flex-col gap-4">
               {chatTurns.map((turn) => (
                 <React.Fragment key={turn.id}>
@@ -113,10 +121,20 @@ export default function ConversationThreadPanel({
                   activityLabel={activityLabel}
                 />
               )}
-              <div ref={messagesEndRef} />
             </div>
           </div>
         )}
+        {showJumpToLatest && !hasNoProject && !isEmptyConversation ? (
+          <button
+            type="button"
+            className="absolute bottom-3 right-3 z-10 inline-flex size-8 cursor-pointer items-center justify-center rounded-full border border-line bg-surface text-muted shadow-lg transition-colors hover:bg-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            aria-label="Jump to latest message"
+            title="Jump to latest message"
+            onClick={jumpToLatest}
+          >
+            <ChevronDownIcon size={13} />
+          </button>
+        ) : null}
       </div>
 
       <ConversationComposer session={session} />
