@@ -21,13 +21,14 @@ import { formatSkillBaseName, resolveSkillDisplayName } from '../../../../shared
 import { downloadSkill, getSkillList, type SkillItem as RemoteSkillItem } from '../../api/skill'
 import { DownloadIcon, RefreshIcon, TrashIcon } from '../icons/Icons'
 
-type RowStatus = 'download' | 'update' | 'installed'
+type RowStatus = 'download' | 'update' | 'installed' | 'builtin-newer'
 
 type SkillRowState = {
   remote: RemoteSkillItem
   displayName: string
   base: string
   remoteVersion: string
+  installedVersion: string
   installed?: InstalledSkillItem
   status: RowStatus
   canDelete: boolean
@@ -48,7 +49,16 @@ function buildRowState(
 
   let status: RowStatus = 'download'
   if (installed) {
-    status = isRemoteSkillNewer(remoteVersion, installedVersion) ? 'update' : 'installed'
+    if (
+      installed.builtin &&
+      installedVersion &&
+      remoteVersion &&
+      compareVersions(installedVersion, remoteVersion) > 0
+    ) {
+      status = 'builtin-newer'
+    } else {
+      status = isRemoteSkillNewer(remoteVersion, installedVersion) ? 'update' : 'installed'
+    }
   }
 
   return {
@@ -56,6 +66,7 @@ function buildRowState(
     displayName,
     base,
     remoteVersion,
+    installedVersion,
     installed,
     status,
     canDelete: Boolean(installed && !installed.builtin),
@@ -99,7 +110,12 @@ function SkillListRow({
   onDownload: (fileName: string) => void
   onDelete: (slug: string) => void
 }): React.JSX.Element {
-  const versionLabel = row.remoteVersion ? `v${row.remoteVersion}` : null
+  const versionLabel =
+    row.status === 'builtin-newer'
+      ? `Built-in v${row.installedVersion} · SkillHub v${row.remoteVersion}`
+      : row.remoteVersion
+        ? `v${row.remoteVersion}`
+        : null
   const isActive = activeInstall?.fileName === row.remote.fileName
 
   return (
@@ -115,13 +131,24 @@ function SkillListRow({
           <span className="truncate text-[13px] font-semibold text-ink">{row.displayName}</span>
           {row.isBuiltin ? <BuiltinBadge /> : null}
         </div>
-        {versionLabel ? <div className="mt-0.5 text-[11px] text-muted">{versionLabel}</div> : null}
+        {versionLabel ? (
+          <div className="mt-0.5 truncate text-[11px] text-muted" title={versionLabel}>
+            {versionLabel}
+          </div>
+        ) : null}
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5">
         {row.status === 'installed' && !isActive ? (
           <span className="rounded-full bg-[color-mix(in_srgb,var(--flow-green)_14%,transparent)] px-2 py-0.5 text-[10px] font-semibold text-[var(--flow-green)]">
             Installed
+          </span>
+        ) : row.status === 'builtin-newer' && !isActive ? (
+          <span
+            className="whitespace-nowrap rounded-full bg-accent-bg px-2 py-0.5 text-[10px] font-semibold text-accent"
+            title="The built-in version is newer than the SkillHub version"
+          >
+            Built-in newer
           </span>
         ) : isActive ? (
           <div className="flex w-[132px] flex-col gap-1">
