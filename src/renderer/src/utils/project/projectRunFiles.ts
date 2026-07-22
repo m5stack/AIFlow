@@ -4,6 +4,9 @@ import { collectProjectFileNodes } from './flattenProjectFiles'
 
 export const MAIN_PY_PATH = 'main.py'
 export const MAIN_OTA_TEMP_PATH = 'main_ota_temp.py'
+const DEVICE_APPS_PATH = 'apps'
+const DEFAULT_DEVICE_APP_NAME = 'project'
+const MAX_DEVICE_APP_NAME_LENGTH = 64
 
 const resolveFileContent = async (
   projectId: string,
@@ -56,6 +59,36 @@ const resolveFileBlob = async (
 
 export const buildMainPyFile = (content: string): File =>
   new File([content], MAIN_OTA_TEMP_PATH, { type: 'text/plain' })
+
+export const buildDeviceAppFileName = (projectName: string, timestamp = Date.now()): string => {
+  const normalizedName = projectName.normalize('NFKC')
+  const safeName = normalizedName
+    .replace(/[^\p{L}\p{N}_-]+/gu, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+  const truncatedName = [...safeName]
+    .slice(0, MAX_DEVICE_APP_NAME_LENGTH)
+    .join('')
+    .replace(/_+$/g, '')
+  return `${truncatedName || DEFAULT_DEVICE_APP_NAME}_${timestamp}.py`
+}
+
+export interface DeviceAppFile {
+  file: File
+  filePath: string
+}
+
+export const buildDeviceAppFile = (
+  projectName: string,
+  content: string,
+  timestamp = Date.now()
+): DeviceAppFile => {
+  const fileName = buildDeviceAppFileName(projectName, timestamp)
+  return {
+    file: new File([content], fileName, { type: 'text/plain' }),
+    filePath: `${DEVICE_APPS_PATH}/${fileName}`
+  }
+}
 
 export interface DeviceFileBatch {
   files: File[]

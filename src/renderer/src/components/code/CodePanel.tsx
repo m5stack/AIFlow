@@ -52,7 +52,7 @@ export default function CodePanel(): React.JSX.Element {
     : selectedFileLanguage
 
   const runOnDevice = async (includeMainPyInDownload: boolean): Promise<void> => {
-    if (!activeProjectId) {
+    if (!activeProjectId || !activeProject) {
       toast.danger('Please select a project first.')
       return
     }
@@ -70,9 +70,10 @@ export default function CodePanel(): React.JSX.Element {
     try {
       const { ran } = await runProjectOnDevice({
         projectId: activeProjectId,
+        projectName: activeProject.projectName,
         deviceId: selectedDevice.id,
         clientId,
-        fileNodes: activeProject?.files ?? [],
+        fileNodes: activeProject.files ?? [],
         selectedPath: codeFilePath ?? undefined,
         selectedContent: selectedFileContent,
         includeMainPyInDownload

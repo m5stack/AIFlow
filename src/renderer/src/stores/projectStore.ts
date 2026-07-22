@@ -746,6 +746,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       // Read from disk (no selectedPath) so the agent's freshly written files are used.
       const { ran } = await runProjectOnDevice({
         projectId,
+        projectName: project.projectName,
         deviceId: device.id,
         clientId: useClientIdStore.getState().clientId,
         fileNodes: project.files ?? [],

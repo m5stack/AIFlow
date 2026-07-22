@@ -1,9 +1,15 @@
 import type { ProjectFileNode } from '../../types/project'
 import { downloadCode, downloadFiles, pushCode } from '../../api/device'
-import { buildDeviceFiles, buildMainPyFile, getMainPyContent } from '../project/projectRunFiles'
+import {
+  buildDeviceAppFile,
+  buildDeviceFiles,
+  buildMainPyFile,
+  getMainPyContent
+} from '../project/projectRunFiles'
 
 export interface RunProjectOnDeviceArgs {
   projectId: string
+  projectName: string
   deviceId: string
   clientId: string
   fileNodes: ProjectFileNode[]
@@ -11,12 +17,12 @@ export interface RunProjectOnDeviceArgs {
   selectedPath?: string
   /** In-memory content for the selected file. */
   selectedContent?: string
-  /** When true, uploads project files and main.py via download APIs instead of pushCode. */
+  /** When true, saves main.py under apps and runs it via the download-code API. */
   includeMainPyInDownload?: boolean
 }
 
 export interface RunProjectOnDeviceResult {
-  /** main.py content that was pushed; empty string means nothing was pushed. */
+  /** main.py content that was sent; empty string means nothing was sent. */
   mainPyContent: string
   /** Whether code was actually sent to the device. */
   ran: boolean
@@ -24,7 +30,7 @@ export interface RunProjectOnDeviceResult {
 
 /**
  * Shared "run" logic used by both the manual Run button and chat auto-run.
- * Reads main.py, uploads supporting project files, then pushes main.py to the device.
+ * Reads main.py, uploads supporting project files, then runs main.py on the device.
  * Throws on transport failure. Returns an empty/`ran: false` result when there is no code.
  */
 export const runProjectOnDevice = async (
@@ -32,6 +38,7 @@ export const runProjectOnDevice = async (
 ): Promise<RunProjectOnDeviceResult> => {
   const {
     projectId,
+    projectName,
     deviceId,
     clientId,
     fileNodes,
@@ -52,11 +59,19 @@ export const runProjectOnDevice = async (
     selectedPath,
     selectedContent
   )
+  const filesToDownload = [...nonMainFiles]
+  const filePathsToDownload = [...nonMainFilePaths]
 
-  if (nonMainFiles.length > 0) {
+  if (includeMainPyInDownload) {
+    const appFile = buildDeviceAppFile(projectName, mainPyContent)
+    filesToDownload.push(appFile.file)
+    filePathsToDownload.push(appFile.filePath)
+  }
+
+  if (filesToDownload.length > 0) {
     await downloadFiles({
-      files: nonMainFiles,
-      filePaths: nonMainFilePaths.join(','),
+      files: filesToDownload,
+      filePaths: filePathsToDownload.join(','),
       deviceId,
       clientId
     })
