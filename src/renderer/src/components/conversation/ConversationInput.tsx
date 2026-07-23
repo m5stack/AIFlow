@@ -99,7 +99,7 @@ export default function ConversationInput({
   ) : isFlowVariant ? (
     <button
       type="button"
-      className="flex size-7 items-center justify-center rounded-full bg-accent text-[#07111e] transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+      className="flex size-7 items-center justify-center rounded-full bg-accent text-gray-200 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
       onClick={handleSend}
       disabled={!value.trim() || disabled}
       title={hasSelectedModel ? 'Send message' : 'Add a model to continue'}
@@ -131,26 +131,25 @@ export default function ConversationInput({
         isFlowVariant
           ? undefined
           : {
-              borderTop: isEmptyVariant ? undefined : '1px solid var(--border)',
-              backgroundColor: 'var(--sidebar-bg)',
-              height
-            }
+            borderTop: isEmptyVariant ? undefined : '1px solid var(--border)',
+            backgroundColor: 'var(--sidebar-bg)',
+            height
+          }
       }
     >
       <div
-        className={`flex flex-col overflow-hidden ${
-          isFlowVariant
-            ? 'h-full min-h-0'
-            : 'h-full rounded-lg focus-within:ring-1 focus-within:ring-accent'
-        }`}
+        className={`flex flex-col overflow-hidden ${isFlowVariant
+          ? 'h-full min-h-0'
+          : 'h-full rounded-lg focus-within:ring-1 focus-within:ring-accent'
+          }`}
         style={
           isFlowVariant
             ? undefined
             : {
-                backgroundColor: 'var(--input-bg)',
-                border: '1px solid var(--input-border)',
-                transition: 'box-shadow 0.15s'
-              }
+              backgroundColor: 'var(--input-bg)',
+              border: '1px solid var(--input-border)',
+              transition: 'box-shadow 0.15s'
+            }
         }
       >
         <textarea
@@ -171,9 +170,8 @@ export default function ConversationInput({
         />
 
         <div
-          className={`flex items-center justify-end px-2.5 py-1.5 ${
-            isFlowVariant ? 'h-9 text-[13px] text-muted' : ''
-          }`}
+          className={`flex items-center justify-end px-2.5 py-1.5 ${isFlowVariant ? 'h-9 text-[13px] text-muted' : ''
+            }`}
         >
           {sendButton}
         </div>

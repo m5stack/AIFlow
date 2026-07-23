@@ -19,13 +19,13 @@ export default function DeviceStatusIndicator({
 
   return (
     <span
-      className={`inline-flex min-w-0 items-center gap-1 text-[10px] leading-none ${className}`}
+      className={`inline-flex h-3 min-w-0 items-center gap-1 text-[10px] leading-3 ${className}`}
       title={status.label}
       aria-label={`Device status: ${status.label}`}
     >
       <span
         aria-hidden
-        className="size-2 shrink-0 rounded-full"
+        className="block size-2 shrink-0 self-center rounded-full"
         style={{ backgroundColor: status.color }}
       />
       {showLabel ? <span className="truncate text-muted">{status.label}</span> : null}

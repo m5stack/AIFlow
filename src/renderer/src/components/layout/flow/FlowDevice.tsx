@@ -217,15 +217,14 @@ export default function FlowDevice(): React.JSX.Element {
     <>
       <div className="flow-device-wrap">
         <div
-          className={`flow-device${
-            showGlow && deviceGlow === 'running'
-              ? ' flow-device-running'
-              : showGlow && deviceGlow === 'success'
-                ? ' flow-device-success'
-                : showGlow && deviceGlow === 'failed'
-                  ? ' flow-device-failed'
-                  : ''
-          }`}
+          className={`flow-device${showGlow && deviceGlow === 'running'
+            ? ' flow-device-running'
+            : showGlow && deviceGlow === 'success'
+              ? ' flow-device-success'
+              : showGlow && deviceGlow === 'failed'
+                ? ' flow-device-failed'
+                : ''
+            }`}
         >
           <div className="flow-device-left">
             <span className="flow-device-title">Device</span>
@@ -374,7 +373,7 @@ export default function FlowDevice(): React.JSX.Element {
             onPress={() => void handleSendToDevice()}
           >
             <SendIcon size={12} />
-            {isSending ? 'Sending…' : 'Send to device'}
+            {isSending ? 'Sending…' : 'Send local files to device'}
           </Button>
           <Button
             size="sm"

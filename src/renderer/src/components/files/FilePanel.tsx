@@ -48,7 +48,7 @@ export default function FilePanel(): React.JSX.Element {
 
   return (
     <PanelShell
-      title="File"
+      title="Local Files"
       icon={<FolderIcon size={16} />}
       actions={
         <button
@@ -76,11 +76,10 @@ export default function FilePanel(): React.JSX.Element {
             return (
               <div
                 key={file.path}
-                className={`group flex h-9 items-center justify-between gap-3 rounded-lg border px-3 text-[14px] transition-colors ${
-                  isActive
+                className={`group flex h-9 items-center justify-between gap-3 rounded-lg border px-3 text-[14px] transition-colors ${isActive
                     ? 'border-accent bg-accent-bg text-ink'
                     : 'border-line bg-surface-2 text-ink hover:bg-soft'
-                }`}
+                  }`}
               >
                 <button
                   type="button"
