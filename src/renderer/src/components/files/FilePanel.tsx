@@ -55,7 +55,7 @@ export default function FilePanel(): React.JSX.Element {
           type="button"
           onClick={handleImportClick}
           disabled={!activeProjectId}
-          className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md border border-line bg-surface-2 px-2 py-1 text-[12px] text-muted transition-colors hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex h-7 shrink-0 cursor-pointer items-center justify-center gap-1 rounded-md border border-line bg-surface-2 px-2 text-[12px] text-muted transition-colors hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
         >
           <PlusIcon size={12} />
           Add Resource
@@ -76,10 +76,11 @@ export default function FilePanel(): React.JSX.Element {
             return (
               <div
                 key={file.path}
-                className={`group flex h-9 items-center justify-between gap-3 rounded-lg border px-3 text-[14px] transition-colors ${isActive
+                className={`group flex h-9 items-center justify-between gap-3 rounded-lg border px-3 text-[14px] transition-colors ${
+                  isActive
                     ? 'border-accent bg-accent-bg text-ink'
                     : 'border-line bg-surface-2 text-ink hover:bg-soft'
-                  }`}
+                }`}
               >
                 <button
                   type="button"

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback } from 'react'
-import { Button } from '@heroui/react'
+import { Button, Tooltip } from '@heroui/react'
 import { ClearTerminalIcon } from '../icons/Icons'
 import { useActiveProjectDevices } from '../../hooks/useActiveProjectDevices'
 import {
@@ -7,6 +7,7 @@ import {
   REALTIME_CONNECT_TIMEOUT_SEC,
   type RealtimeTerminalStatus
 } from '../../hooks/useRealtimeTerminal'
+import { MP_CTRL } from '../../utils/terminal/pasteFlow'
 import PanelShell from '../layout/PanelShell'
 import TerminalView, { type TerminalViewHandle } from './TerminalView'
 
@@ -64,6 +65,12 @@ export default function TerminalPanel(): React.JSX.Element {
     else void handleConnect()
   }
 
+  const handleInterrupt = (): void => {
+    if (!isConnected) return
+    sendData(MP_CTRL.INTERRUPT)
+    terminalRef.current?.focus()
+  }
+
   useEffect(() => {
     if (status === 'connected' && canAutoConnect) {
       terminalRef.current?.focus()
@@ -85,17 +92,38 @@ export default function TerminalPanel(): React.JSX.Element {
     </Button>
   )
 
+  const cliButton = (
+    <Tooltip delay={300}>
+      <Tooltip.Trigger className="inline-flex">
+        <span className="inline-flex">
+          <button
+            type="button"
+            className="inline-flex h-7 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-md border border-line bg-surface-2 px-2 text-[12px] text-muted transition-colors enabled:hover:border-accent enabled:hover:bg-soft enabled:hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={!isConnected}
+            onClick={handleInterrupt}
+            aria-label="Interrupt device and enter CLI (Ctrl+C)"
+          >
+            CLI
+          </button>
+        </span>
+      </Tooltip.Trigger>
+      <Tooltip.Content placement="top" showArrow>
+        Interrupt device and enter CLI (Ctrl+C)
+      </Tooltip.Content>
+    </Tooltip>
+  )
+
   const connectionButtonTitle =
     status === 'error' && errorMessage ? errorMessage : STATUS_LABELS[status]
 
-  const headerActions = (
+  const connectionButton = (
     <button
       type="button"
       onClick={handleToggleConnection}
       disabled={!canConfigureConnection || isConnecting || (!isConnected && !canConnect)}
       aria-label={isConnected ? 'Disconnect' : 'Connect'}
       title={connectionButtonTitle}
-      className={`group inline-flex min-w-[96px] shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-line bg-surface-2 px-2 py-1 text-[12px] text-muted transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`group inline-flex h-7 min-w-[96px] shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-line bg-surface-2 px-2 text-[12px] text-muted transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
         isConnecting
           ? ''
           : isConnected
@@ -118,6 +146,13 @@ export default function TerminalPanel(): React.JSX.Element {
         </>
       )}
     </button>
+  )
+
+  const headerActions = (
+    <div className="flex items-center gap-1.5">
+      {cliButton}
+      {connectionButton}
+    </div>
   )
 
   return (
