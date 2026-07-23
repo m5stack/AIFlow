@@ -1,4 +1,5 @@
 import { downloadCode, previewDeviceFile } from '../../api/device'
+import { requestDeviceFileTreeRefresh } from '../../stores/deviceFileTreeStore'
 import { buildMainPyFile } from '../project/projectRunFiles'
 import { parseDeviceFilePreview } from './parseDeviceFilePreview'
 
@@ -26,4 +27,5 @@ export const setDeviceStartupFile = async ({
   }
 
   await downloadCode([buildMainPyFile(preview.content)], deviceId, clientId)
+  requestDeviceFileTreeRefresh(deviceId)
 }

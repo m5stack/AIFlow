@@ -1,5 +1,6 @@
 import type { ProjectFileNode } from '../../types/project'
 import { downloadFiles } from '../../api/device'
+import { requestDeviceFileTreeRefresh } from '../../stores/deviceFileTreeStore'
 import { buildDeviceAppFile, buildDeviceFiles, getMainPyContent } from '../project/projectRunFiles'
 
 export interface ProjectDeviceTransferArgs {
@@ -72,5 +73,6 @@ export const sendProjectToDevice = async (
   args: ProjectDeviceTransferArgs
 ): Promise<SendProjectToDeviceResult> => {
   const result = await transferProjectFilesToDevice(args, { includeAppFile: true })
+  if (result.transferred) requestDeviceFileTreeRefresh(args.deviceId)
   return { mainPyContent: result.mainPyContent, sent: result.transferred }
 }

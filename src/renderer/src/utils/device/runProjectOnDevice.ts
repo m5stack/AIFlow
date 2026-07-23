@@ -1,4 +1,5 @@
 import { downloadCode, pushCode } from '../../api/device'
+import { requestDeviceFileTreeRefresh } from '../../stores/deviceFileTreeStore'
 import { buildMainPyFile } from '../project/projectRunFiles'
 import {
   transferProjectFilesToDevice,
@@ -26,7 +27,7 @@ export const runProjectOnDevice = async (
   args: RunProjectOnDeviceArgs
 ): Promise<RunProjectOnDeviceResult> => {
   const { deviceId, clientId, includeMainPyInDownload = false } = args
-  const { mainPyContent } = await transferProjectFilesToDevice(args, {
+  const { mainPyContent, transferred } = await transferProjectFilesToDevice(args, {
     includeAppFile: includeMainPyInDownload
   })
 
@@ -34,10 +35,14 @@ export const runProjectOnDevice = async (
     return { mainPyContent: '', ran: false }
   }
 
-  if (includeMainPyInDownload) {
-    await downloadCode([buildMainPyFile(mainPyContent)], deviceId, clientId)
-  } else {
-    await pushCode(deviceId, mainPyContent)
+  try {
+    if (includeMainPyInDownload) {
+      await downloadCode([buildMainPyFile(mainPyContent)], deviceId, clientId)
+    } else {
+      await pushCode(deviceId, mainPyContent)
+    }
+  } finally {
+    if (transferred) requestDeviceFileTreeRefresh(deviceId)
   }
 
   return { mainPyContent, ran: true }

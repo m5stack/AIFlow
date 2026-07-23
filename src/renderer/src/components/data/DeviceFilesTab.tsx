@@ -1,11 +1,17 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Tooltip, toast } from '@heroui/react'
 import { deleteDeviceFile, getDeviceFileTree } from '../../api/device'
 import type { DeviceFile, DeviceFileTreeNode } from '../../types/device'
-import { useActiveProjectDevices } from '../../hooks/useActiveProjectDevices'
+import {
+  useActiveProjectDevices,
+  type SelectedProjectDevice
+} from '../../hooks/useActiveProjectDevices'
 import { useClientIdStore } from '../../stores/clientIdStore'
 import { useDeviceFilePreviewStore } from '../../stores/deviceFilePreviewStore'
-import { useDeviceFileTreeStore } from '../../stores/deviceFileTreeStore'
+import {
+  requestDeviceFileTreeRefresh,
+  useDeviceFileTreeStore
+} from '../../stores/deviceFileTreeStore'
 import { useDeviceStore } from '../../stores/deviceStore'
 import { isImagePath } from '../../../../shared/fileExtensions'
 import { setDeviceStartupFile } from '../../utils/device/setDeviceStartupFile'
@@ -67,9 +73,23 @@ const listTreeEntries = (node: DeviceFileTreeNode | null): DeviceFile[] => {
 }
 
 export default function DeviceFilesTab(): React.JSX.Element {
-  const clientId = useClientIdStore((s) => s.clientId)
   const { selectedDevice } = useActiveProjectDevices()
   const allDevices = useDeviceStore((s) => s.devices)
+
+  const displayDevice = useMemo(() => {
+    if (selectedDevice && !selectedDevice.invalid) return selectedDevice
+    return allDevices.find((device) => !device.invalid) ?? allDevices[0]
+  }, [selectedDevice, allDevices])
+
+  return <DeviceFilesContent key={displayDevice?.id ?? 'no-device'} displayDevice={displayDevice} />
+}
+
+function DeviceFilesContent({
+  displayDevice
+}: {
+  displayDevice: SelectedProjectDevice | undefined
+}): React.JSX.Element {
+  const clientId = useClientIdStore((s) => s.clientId)
   const loadPreview = useDeviceFilePreviewStore((s) => s.loadPreview)
   const clearPreview = useDeviceFilePreviewStore((s) => s.clearPreview)
   const selectedDeviceFilePath = useDeviceFilePreviewStore((s) => s.selectedFile?.path ?? null)
@@ -80,17 +100,18 @@ export default function DeviceFilesTab(): React.JSX.Element {
   const clearDeviceFileTree = useDeviceFileTreeStore((s) => s.clear)
   const confirm = useConfirmDialog()
 
-  const displayDevice = useMemo(() => {
-    if (selectedDevice && !selectedDevice.invalid) return selectedDevice
-    return allDevices.find((device) => !device.invalid) ?? allDevices[0]
-  }, [selectedDevice, allDevices])
+  const refreshVersion = useDeviceFileTreeStore((s) =>
+    displayDevice?.id ? (s.refreshVersionByDeviceId[displayDevice.id] ?? 0) : 0
+  )
+  const canFetchDeviceFiles =
+    !!displayDevice?.id && !displayDevice.invalid && displayDevice.status === 'connected'
 
   const [currentPath, setCurrentPath] = useState(ROOT_PATH)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [refreshTick, setRefreshTick] = useState(0)
   const [deletingFile, setDeletingFile] = useState<string | null>(null)
   const [settingStartupFile, setSettingStartupFile] = useState<string | null>(null)
+  const requestSequenceRef = useRef(0)
 
   const tree = storeDeviceId === displayDevice?.id ? storeTree : null
   const rootFsPath = storeDeviceId === displayDevice?.id ? storeRootFsPath : ''
@@ -108,42 +129,51 @@ export default function DeviceFilesTab(): React.JSX.Element {
   )
 
   useEffect(() => {
-    setCurrentPath(ROOT_PATH)
-    clearPreview()
-    clearDeviceFileTree()
-  }, [clearDeviceFileTree, clearPreview, displayDevice?.id])
-
-  useEffect(() => {
     clearPreview()
   }, [clearPreview, currentPath])
 
-  const fetchFiles = useCallback(async () => {
-    if (!displayDevice?.id) {
-      clearDeviceFileTree()
+  const fetchFiles = useCallback(
+    async (requestId: number, deviceId: string) => {
+      setIsLoading(true)
       setError(null)
-      setIsLoading(false)
-      return
-    }
-
-    setIsLoading(true)
-    setError(null)
-    try {
-      const response = await getDeviceFileTree({
-        deviceId: displayDevice.id,
-        clientId
-      })
-      setDeviceFileTree(displayDevice.id, response.tree ?? {}, response.fs_path ?? '')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load device files')
-      clearDeviceFileTree()
-    } finally {
-      setIsLoading(false)
-    }
-  }, [clearDeviceFileTree, clientId, displayDevice?.id, setDeviceFileTree])
+      try {
+        const response = await getDeviceFileTree({
+          deviceId,
+          clientId
+        })
+        if (requestId !== requestSequenceRef.current) return
+        setDeviceFileTree(deviceId, response.tree ?? {}, response.fs_path ?? '')
+      } catch (err) {
+        if (requestId !== requestSequenceRef.current) return
+        setError(err instanceof Error ? err.message : 'Failed to load device files')
+        clearDeviceFileTree()
+      } finally {
+        if (requestId === requestSequenceRef.current) setIsLoading(false)
+      }
+    },
+    [clearDeviceFileTree, clientId, setDeviceFileTree]
+  )
 
   useEffect(() => {
-    void fetchFiles()
-  }, [fetchFiles, refreshTick])
+    const requestId = ++requestSequenceRef.current
+    let scheduledRequest: number | undefined
+
+    if (canFetchDeviceFiles && displayDevice?.id) {
+      const deviceId = displayDevice.id
+      // Deferring the request lets React StrictMode cancel its development-only
+      // probe effect before any network work starts.
+      scheduledRequest = window.setTimeout(() => {
+        void fetchFiles(requestId, deviceId)
+      }, 0)
+    }
+
+    return () => {
+      if (scheduledRequest !== undefined) window.clearTimeout(scheduledRequest)
+      if (requestSequenceRef.current === requestId) {
+        requestSequenceRef.current += 1
+      }
+    }
+  }, [canFetchDeviceFiles, displayDevice?.id, fetchFiles, refreshVersion])
 
   const handleOpenFolder = (name: string): void => {
     const nextPath = currentPath ? `${currentPath}/${name}` : name
@@ -155,7 +185,8 @@ export default function DeviceFilesTab(): React.JSX.Element {
   }
 
   const handleRefresh = (): void => {
-    setRefreshTick((tick) => tick + 1)
+    if (!displayDevice?.id || !canFetchDeviceFiles || isLoading) return
+    requestDeviceFileTreeRefresh(displayDevice.id)
   }
 
   const handlePreview = (fileName: string): void => {
@@ -191,7 +222,7 @@ export default function DeviceFilesTab(): React.JSX.Element {
       if (selectedDeviceFilePath === previewFilePath) {
         clearPreview()
       }
-      handleRefresh()
+      requestDeviceFileTreeRefresh(displayDevice.id)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       toast.danger(`Delete device file failed: ${message}`)
@@ -221,19 +252,30 @@ export default function DeviceFilesTab(): React.JSX.Element {
     }
   }
 
-  const showStatus = !displayDevice?.id || isLoading || !!error || sortedFileList.length === 0
+  const showLoading = canFetchDeviceFiles && isLoading
+  const visibleError = canFetchDeviceFiles ? error : null
+  const showStatus =
+    !displayDevice?.id || showLoading || !!visibleError || sortedFileList.length === 0
 
   const renderStatus = (): React.ReactNode => {
     if (!displayDevice?.id) {
       return <div className="text-[13px] text-muted">No device selected</div>
     }
 
-    if (isLoading) {
+    if (displayDevice.invalid) {
+      return <div className="text-[13px] text-muted">Device unavailable</div>
+    }
+
+    if (displayDevice.status !== 'connected') {
+      return <div className="text-[13px] text-muted">Device disconnected</div>
+    }
+
+    if (showLoading) {
       return <div className="text-[13px] text-muted">Loading device files…</div>
     }
 
-    if (error) {
-      return <div className="text-[13px] text-muted">{error}</div>
+    if (visibleError) {
+      return <div className="text-[13px] text-muted">{visibleError}</div>
     }
 
     return <div className="text-[13px] text-muted">No files</div>
@@ -341,7 +383,7 @@ export default function DeviceFilesTab(): React.JSX.Element {
         <button
           type="button"
           onClick={handleRefresh}
-          disabled={!displayDevice?.id || isLoading}
+          disabled={!canFetchDeviceFiles || isLoading}
           aria-label="Refresh"
           className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md border border-line bg-surface-2 text-muted transition-colors hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
         >
