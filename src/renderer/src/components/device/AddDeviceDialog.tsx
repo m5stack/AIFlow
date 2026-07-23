@@ -17,6 +17,8 @@ import { bindDevice } from '../../api/device'
 import { useClientIdStore } from '../../stores/clientIdStore'
 import { useDeviceStore } from '../../stores/deviceStore'
 import { useProjectStore } from '../../stores/projectStore'
+import { ZapIcon } from '../icons/Icons'
+import FirmwareFlashDialog from './FirmwareFlashDialog'
 
 interface AddDeviceDialogProps {
   isOpen: boolean
@@ -37,6 +39,7 @@ export default function AddDeviceDialog({
 
   const [pairCode, setPairCode] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showFlashDialog, setShowFlashDialog] = useState(false)
 
   const pairCodeValid = pairCode.length === 6 && /^\d{6}$/.test(pairCode)
 
@@ -47,6 +50,7 @@ export default function AddDeviceDialog({
   const handleClose = (): void => {
     if (isSubmitting) return
     setPairCode('')
+    setShowFlashDialog(false)
     onClose()
   }
 
@@ -66,7 +70,7 @@ export default function AddDeviceDialog({
       const latest = useDeviceStore.getState().devices.find((d) => d.id === device.id) ?? device
       if (projectId) void setProjectActiveDevice(projectId, latest.id)
       onDeviceAdded?.(latest.id)
-      toast.success(`Device \"${latest.name}\" added.`)
+      toast.success(`Device "${latest.name}" added.`)
       handleClose()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
@@ -77,83 +81,113 @@ export default function AddDeviceDialog({
   }
 
   return (
-    <Modal>
-      <Modal.Trigger
-        aria-hidden
-        tabIndex={-1}
-        className="fixed size-0 overflow-hidden opacity-0 pointer-events-none border-0 p-0"
-      />
-      <ModalBackdrop
-        isOpen={isOpen}
-        onOpenChange={(open) => {
-          if (!open) handleClose()
-        }}
-        isDismissable={!isSubmitting}
-      >
-        <ModalContainer size="lg">
-          <ModalDialog>
-            <Modal.CloseTrigger />
-            <ModalHeader>
-              <ModalHeading className="text-lg">Add Device</ModalHeading>
-            </ModalHeader>
+    <>
+      <Modal>
+        <Modal.Trigger
+          aria-hidden
+          tabIndex={-1}
+          className="fixed size-0 overflow-hidden opacity-0 pointer-events-none border-0 p-0"
+        />
+        <ModalBackdrop
+          isOpen={isOpen}
+          onOpenChange={(open) => {
+            if (!open) handleClose()
+          }}
+          isDismissable={!isSubmitting}
+        >
+          <ModalContainer size="lg">
+            <ModalDialog>
+              <Modal.CloseTrigger />
+              <ModalHeader>
+                <ModalHeading className="text-lg">Add Device</ModalHeading>
+              </ModalHeader>
 
-            <ModalBody className="flex flex-col gap-4 p-2">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[12px] font-medium text-default-500">Access Code</label>
-                <p className="text-[11px]" style={{ color: 'var(--text)', opacity: 0.6 }}>
-                  Enter the 6-digit pairing code shown on the device screen.
-                </p>
-                <TextField
-                  value={pairCode}
-                  onChange={(v) => setPairCode(v.replace(/\D/g, '').slice(0, 6))}
-                >
-                  <Input
-                    placeholder="000000"
-                    className="min-h-14 border border-[var(--border)] rounded-lg"
-                    style={{
-                      fontSize: 20,
-                      lineHeight: 1,
-                      letterSpacing: '0.45em',
-                      textAlign: 'center',
-                      fontFamily: 'ui-monospace, monospace',
-                      paddingTop: 12,
-                      paddingBottom: 12
-                    }}
-                    maxLength={6}
-                    disabled={isSubmitting}
-                  />
-                </TextField>
-                {pairCode.length > 0 && !pairCodeValid && (
-                  <p className="text-[11px]" style={{ color: '#f85149' }}>
-                    Pairing code must be exactly 6 digits.
+              <ModalBody className="flex flex-col gap-4 p-2">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[12px] font-medium text-default-500">Access Code</label>
+                  <p className="text-[11px]" style={{ color: 'var(--text)', opacity: 0.6 }}>
+                    Enter the 6-digit pairing code shown on the device screen.
                   </p>
-                )}
-              </div>
-            </ModalBody>
+                  <TextField
+                    value={pairCode}
+                    onChange={(v) => setPairCode(v.replace(/\D/g, '').slice(0, 6))}
+                  >
+                    <Input
+                      placeholder="000000"
+                      className="min-h-14 border border-[var(--border)] rounded-lg"
+                      style={{
+                        fontSize: 20,
+                        lineHeight: 1,
+                        letterSpacing: '0.45em',
+                        textAlign: 'center',
+                        fontFamily: 'ui-monospace, monospace',
+                        paddingTop: 12,
+                        paddingBottom: 12
+                      }}
+                      maxLength={6}
+                      disabled={isSubmitting}
+                    />
+                  </TextField>
+                  {pairCode.length > 0 && !pairCodeValid && (
+                    <p className="text-[11px]" style={{ color: '#f85149' }}>
+                      Pairing code must be exactly 6 digits.
+                    </p>
+                  )}
+                </div>
 
-            <ModalFooter className="flex justify-end gap-2 px-2">
-              <Button
-                variant="ghost"
-                className="text-[13px] cursor-pointer"
-                onClick={handleClose}
-                isDisabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                className="text-[13px] cursor-pointer"
-                onClick={() => {
-                  void handleSubmit()
-                }}
-                isDisabled={!canSubmit}
-              >
-                {isSubmitting ? 'Adding...' : 'Add Device'}
-              </Button>
-            </ModalFooter>
-          </ModalDialog>
-        </ModalContainer>
-      </ModalBackdrop>
-    </Modal>
+                <div
+                  className="flex items-center justify-between rounded-lg px-3 py-2.5"
+                  style={{
+                    backgroundColor: 'var(--social-bg)',
+                    border: '1px solid var(--border)'
+                  }}
+                >
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <span className="text-[12px] font-medium text-[var(--text-h)]">
+                      Flash Firmware
+                    </span>
+                    <span className="text-[11px]" style={{ color: 'var(--text)', opacity: 0.55 }}>
+                      Install AIFlow firmware before pairing a device
+                    </span>
+                  </div>
+                  <Button
+                    variant="primary"
+                    className="flex-shrink-0 cursor-pointer text-[12px]"
+                    onPress={() => setShowFlashDialog(true)}
+                    isDisabled={isSubmitting}
+                  >
+                    <ZapIcon size={13} className="mr-1" />
+                    Flash
+                  </Button>
+                </div>
+              </ModalBody>
+
+              <ModalFooter className="flex justify-end gap-2 px-2">
+                <Button
+                  variant="ghost"
+                  className="text-[13px] cursor-pointer"
+                  onClick={handleClose}
+                  isDisabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  className="text-[13px] cursor-pointer"
+                  onClick={() => {
+                    void handleSubmit()
+                  }}
+                  isDisabled={!canSubmit}
+                >
+                  {isSubmitting ? 'Adding...' : 'Add Device'}
+                </Button>
+              </ModalFooter>
+            </ModalDialog>
+          </ModalContainer>
+        </ModalBackdrop>
+      </Modal>
+
+      <FirmwareFlashDialog isOpen={showFlashDialog} onClose={() => setShowFlashDialog(false)} />
+    </>
   )
 }

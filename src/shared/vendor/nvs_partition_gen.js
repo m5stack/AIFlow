@@ -308,7 +308,7 @@ class Page {
   }
 
   writeVarlenData(key, data, encoding, nsIndex, nvsObj) {
-    const datalen = Buffer.isBuffer(data) ? data.length : String(data).length
+    const datalen = Buffer.isBuffer(data) ? data.length : Buffer.byteLength(String(data), 'utf8')
     const maxBlobSize = Page.PAGE_PARAMS.max_blob_size[this.version]
     const blobLimitApplies = this.version === Page.VERSION1 || encoding === 'string'
 
