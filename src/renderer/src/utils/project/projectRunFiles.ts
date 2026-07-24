@@ -1,5 +1,6 @@
 import type { ProjectFileNode } from '../../types/project'
 import { deviceRelativePathForProjectFile } from '../../../../shared/devicePaths'
+import { extensionFromPath } from '../../../../shared/fileExtensions'
 import { collectProjectFileNodes } from './flattenProjectFiles'
 
 export const MAIN_PY_PATH = 'main.py'
@@ -7,6 +8,13 @@ export const MAIN_OTA_TEMP_PATH = 'main_ota_temp.py'
 const DEVICE_APPS_PATH = 'apps'
 const DEFAULT_DEVICE_APP_NAME = 'project'
 const MAX_DEVICE_APP_NAME_LENGTH = 64
+const AUDIO_EXTENSIONS = new Set(['.aac', '.flac', '.m4a', '.mp3', '.ogg', '.wav'])
+
+const devicePathForProjectFile = (node: ProjectFileNode): string => {
+  if (node.language === 'image') return `img/${node.name}`
+  if (AUDIO_EXTENSIONS.has(extensionFromPath(node.path))) return `audio/${node.name}`
+  return node.path
+}
 
 const resolveFileContent = async (
   projectId: string,
@@ -108,7 +116,7 @@ export const buildDeviceFiles = async (
   for (const node of nodes) {
     const blob = await resolveFileBlob(projectId, node, selectedPath, selectedContent)
     files.push(new File([blob], node.name, { type: blob.type || 'application/octet-stream' }))
-    filePaths.push(deviceRelativePathForProjectFile(node.path))
+    filePaths.push(deviceRelativePathForProjectFile(devicePathForProjectFile(node)))
   }
 
   return { files, filePaths }
