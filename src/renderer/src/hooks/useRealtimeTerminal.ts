@@ -16,7 +16,6 @@ const HEARTBEAT_INTERVAL_SEC = 30
 interface UseRealtimeTerminalOptions {
   /** When true, connect automatically for a valid device and reconnect on device change. */
   autoConnect?: boolean
-  deviceName?: string
 }
 
 interface UseRealtimeTerminalResult {
@@ -28,9 +27,27 @@ interface UseRealtimeTerminalResult {
   setTerminalDataHandler: (handler: ((data: string) => void) | null) => void
 }
 
+const formatTerminalServerMessage = (
+  kind: 'connecting' | 'connected' | 'disconnected' | 'failed',
+  detail = ''
+): string => {
+  switch (kind) {
+    case 'connecting':
+      return 'Connecting to Terminal server...'
+    case 'connected':
+      return 'Connected to Terminal server'
+    case 'disconnected':
+      return 'Disconnected from Terminal server'
+    case 'failed':
+      return detail
+        ? `Connection to Terminal server failed: ${detail}`
+        : 'Connection to Terminal server failed'
+  }
+}
+
 export function useRealtimeTerminal(
   deviceId: string,
-  { autoConnect = false, deviceName = '' }: UseRealtimeTerminalOptions = {}
+  { autoConnect = false }: UseRealtimeTerminalOptions = {}
 ): UseRealtimeTerminalResult {
   const [status, setStatus] = useState<RealtimeTerminalStatus>('idle')
   const [errorMessage, setErrorMessage] = useState('')
@@ -45,9 +62,7 @@ export function useRealtimeTerminal(
   const replInitGotResponseRef = useRef(false)
   const replInitOutputBufferRef = useRef('')
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const sessionDeviceRef = useRef({ id: '', name: '' })
-  const deviceNameRef = useRef(deviceName)
-  deviceNameRef.current = deviceName
+  const sessionDeviceIdRef = useRef('')
 
   const cancelReplInitRetry = useCallback((): void => {
     replInitSessionRef.current += 1
@@ -97,28 +112,11 @@ export function useRealtimeTerminal(
     [writeToTerminal]
   )
 
-  const formatSessionMessage = useCallback(
-    (
-      kind: 'connecting' | 'connected' | 'disconnected' | 'failed',
-      session: { id: string; name: string },
-      detail = ''
-    ): string => {
-      const label = session.name.trim() || session.id.trim()
-      const target = label ? ` ${label}` : ''
-      switch (kind) {
-        case 'connecting':
-          return `Connecting to${target}...`
-        case 'connected':
-          return `Connected to${target}`
-        case 'disconnected':
-          return `Disconnected from${target}`
-        case 'failed':
-          return detail
-            ? `Connection failed${label ? ` (${label})` : ''}: ${detail}`
-            : `Connection failed${label ? ` (${label})` : ''}`
-      }
+  const writeDeviceStatusLine = useCallback(
+    (line: string): void => {
+      writeToTerminal(`\r\n${formatTerminalSystemLine(line)}`)
     },
-    []
+    [writeToTerminal]
   )
 
   const setTerminalDataHandler = useCallback((handler: ((data: string) => void) | null): void => {
@@ -203,11 +201,11 @@ export function useRealtimeTerminal(
           deliverDeviceOutput(message.payload)
           break
         case 'deviceConnected':
-          writeSystemLine('Device online')
+          writeDeviceStatusLine('Device online')
           void scheduleReplInit()
           break
         case 'deviceOffline':
-          writeSystemLine('Device offline')
+          writeDeviceStatusLine('Device offline')
           cancelReplInitRetry()
           break
         case 'error':
@@ -216,7 +214,13 @@ export function useRealtimeTerminal(
           break
       }
     },
-    [cancelReplInitRetry, deliverDeviceOutput, noteReplInitOutput, scheduleReplInit, writeSystemLine]
+    [
+      cancelReplInitRetry,
+      deliverDeviceOutput,
+      noteReplInitOutput,
+      scheduleReplInit,
+      writeDeviceStatusLine
+    ]
   )
 
   const disconnect = useCallback(
@@ -235,10 +239,10 @@ export function useRealtimeTerminal(
 
       if (!ws) {
         if (!options?.silent && wasActive) {
-          writeSystemLine(formatSessionMessage('disconnected', sessionDeviceRef.current))
+          writeSystemLine(formatTerminalServerMessage('disconnected'))
         }
         if (!options?.silent) {
-          sessionDeviceRef.current = { id: '', name: '' }
+          sessionDeviceIdRef.current = ''
         }
         setStatus('idle')
         setErrorMessage('')
@@ -246,10 +250,10 @@ export function useRealtimeTerminal(
       }
 
       if (!options?.silent && wasActive) {
-        writeSystemLine(formatSessionMessage('disconnected', sessionDeviceRef.current))
+        writeSystemLine(formatTerminalServerMessage('disconnected'))
       }
       if (!options?.silent) {
-        sessionDeviceRef.current = { id: '', name: '' }
+        sessionDeviceIdRef.current = ''
       }
       ws.onopen = null
       ws.onmessage = null
@@ -261,7 +265,7 @@ export function useRealtimeTerminal(
       setStatus('idle')
       setErrorMessage('')
     },
-    [cancelReplInitRetry, clearHeartbeat, formatSessionMessage, writeSystemLine]
+    [cancelReplInitRetry, clearHeartbeat, writeSystemLine]
   )
 
   const connect = useCallback(async (): Promise<boolean> => {
@@ -272,16 +276,15 @@ export function useRealtimeTerminal(
       return false
     }
 
-    const nextSession = { id: trimmedDeviceId, name: deviceNameRef.current.trim() }
-    const prevSession = sessionDeviceRef.current
+    const previousDeviceId = sessionDeviceIdRef.current
     const wasActive =
       statusRef.current === 'connected' ||
       statusRef.current === 'connecting' ||
       wsRef.current?.readyState === WebSocket.OPEN ||
       wsRef.current?.readyState === WebSocket.CONNECTING
 
-    if (wasActive && prevSession.id) {
-      writeSystemLine(formatSessionMessage('disconnected', prevSession))
+    if (wasActive && previousDeviceId) {
+      writeSystemLine(formatTerminalServerMessage('disconnected'))
     }
 
     await disconnect({ silent: true })
@@ -289,7 +292,7 @@ export function useRealtimeTerminal(
     const attemptId = ++connectAttemptRef.current
     setStatus('connecting')
     setErrorMessage('')
-    writeSystemLine(formatSessionMessage('connecting', nextSession))
+    writeSystemLine(formatTerminalServerMessage('connecting'))
 
     let connected = false
 
@@ -312,9 +315,9 @@ export function useRealtimeTerminal(
               handleWsMessage(raw, () => {
                 if (connected) return
                 connected = true
-                sessionDeviceRef.current = nextSession
+                sessionDeviceIdRef.current = trimmedDeviceId
                 setStatus('connected')
-                writeSystemLine(formatSessionMessage('connected', nextSession))
+                writeSystemLine(formatTerminalServerMessage('connected'))
                 startHeartbeat()
                 resolve()
               })
@@ -341,8 +344,8 @@ export function useRealtimeTerminal(
               reject(new Error('Connection closed before handshake'))
               return
             }
-            writeSystemLine(formatSessionMessage('disconnected', sessionDeviceRef.current))
-            sessionDeviceRef.current = { id: '', name: '' }
+            writeSystemLine(formatTerminalServerMessage('disconnected'))
+            sessionDeviceIdRef.current = ''
             setStatus('idle')
           }
         }),
@@ -375,7 +378,7 @@ export function useRealtimeTerminal(
       }
 
       const message = error instanceof Error ? error.message : 'Connection failed'
-      writeSystemLine(formatSessionMessage('failed', nextSession, message))
+      writeSystemLine(formatTerminalServerMessage('failed', message))
       setErrorMessage(message)
       setStatus('error')
       return false
@@ -384,7 +387,6 @@ export function useRealtimeTerminal(
     clearHeartbeat,
     deviceId,
     disconnect,
-    formatSessionMessage,
     handleWsMessage,
     scheduleReplInit,
     startHeartbeat,

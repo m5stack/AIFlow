@@ -46,8 +46,7 @@ export default function TerminalPanel(): React.JSX.Element {
 
   const { status, errorMessage, connect, disconnect, sendData, setTerminalDataHandler } =
     useRealtimeTerminal(selectedDeviceId, {
-      autoConnect: canAutoConnect,
-      deviceName: selectedDevice?.name ?? ''
+      autoConnect: canAutoConnect
     })
 
   const isConnected = status === 'connected'
