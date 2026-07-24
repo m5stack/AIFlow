@@ -15,7 +15,11 @@ import type {
   GenerateConversationTitleParams,
   ProjectConversation
 } from '../../shared/types'
-import { formatPinMapsForPrompt, normalizeDeviceTypeForPinMap } from '../../shared/deviceInfo'
+import {
+  DEVICE_TYPE,
+  formatPinMapsForPrompt,
+  normalizeDeviceTypeForPinMap
+} from '../../shared/deviceInfo'
 import { buildAgentSdkEnv } from '../agentEnv'
 import { getClaudeExecutablePath } from '../claudeExecutablePath'
 import {
@@ -75,6 +79,23 @@ const formatTimestamp = (): string =>
     hour12: false
   })
 
+const buildDeviceModelConstraint = (normalizedType: string): string | undefined => {
+  const models =
+    normalizedType === DEVICE_TYPE.CARDPUTER
+      ? { selected: 'Cardputer', other: 'Cardputer-Adv' }
+      : normalizedType === DEVICE_TYPE.CARDPUTER_ADV
+        ? { selected: 'Cardputer-Adv', other: 'Cardputer' }
+        : undefined
+
+  if (!models) return undefined
+
+  return [
+    'IMPORTANT: Cardputer and Cardputer-Adv are distinct hardware models.',
+    `The selected hardware is ${models.selected}, not ${models.other}.`,
+    `Do not assume compatibility or reuse ${models.other}-specific code, firmware, pin mappings, peripheral capabilities, or documentation.`
+  ].join('\n')
+}
+
 const buildActiveDevicePrompt = (activeDevice?: AgentActiveDevice): string | undefined => {
   if (!activeDevice?.type) return undefined
 
@@ -83,6 +104,7 @@ const buildActiveDevicePrompt = (activeDevice?: AgentActiveDevice): string | und
     'Currently selected device:',
     `Device name: ${activeDevice.name}`,
     `Device type: ${activeDevice.type}`,
+    buildDeviceModelConstraint(normalizedType),
     formatPinMapsForPrompt(normalizedType)
   ]
 
@@ -248,7 +270,7 @@ export class AgentService {
     private readonly mcpService: McpService,
     private readonly tokenUsageService: TokenUsageService,
     private readonly sendEvent: AgentEventSender
-  ) {}
+  ) { }
 
   async startTurn(params: AgentStartTurnParams): Promise<{ turnId: string }> {
     const turnId = `turn-${Date.now()}-${Math.random().toString(16).slice(2)}`
@@ -465,9 +487,9 @@ export class AgentService {
             return response.behavior === 'allow'
               ? { behavior: 'allow' as const, updatedInput: input }
               : {
-                  behavior: 'deny' as const,
-                  message: response.message || 'User denied permission.'
-                }
+                behavior: 'deny' as const,
+                message: response.message || 'User denied permission.'
+              }
           }
         }
       }) as QueryHandle & AsyncIterable<unknown>
@@ -487,12 +509,12 @@ export class AgentService {
               : undefined,
           deltaType:
             message.type === 'stream_event' &&
-            (message.event as { type?: unknown } | undefined)?.type === 'content_block_delta'
+              (message.event as { type?: unknown } | undefined)?.type === 'content_block_delta'
               ? ((message.event as { delta?: { type?: unknown } }).delta?.type ?? undefined)
               : undefined,
           blockType:
             message.type === 'stream_event' &&
-            (message.event as { type?: unknown } | undefined)?.type === 'content_block_start'
+              (message.event as { type?: unknown } | undefined)?.type === 'content_block_start'
               ? ((message.event as { content_block?: { type?: unknown } }).content_block?.type ??
                 undefined)
               : undefined,
