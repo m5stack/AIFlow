@@ -1,6 +1,6 @@
-﻿# M5Stack Assistant Skill
+# M5Stack Assistant Skill
 
-M5Stack 官方 MCP 检索辅助 skill。核心规则：先查官方 MCP，再基于结果回答；当前 `knowledge_search` 新接口不再使用 `num`，服务端固定返回前 10 条主检索结果。
+M5Stack 官方 MCP 检索辅助 skill。核心规则：先查官方 MCP，再基于结果回答。
 
 ## 包含内容
 
@@ -27,7 +27,6 @@ node m5-search.mjs "ESP32-S3 寄存器说明" --chip
 
 - `--filter <类型>`：可选，`product` / `product_no_eol` / `program` / `arduino` / `uiflow` / `esp-idf` / `esphome`。
 - `--chip`：额外检索芯片数据手册相关内容。
-- `--num`：已废弃；脚本会提示并忽略，服务端固定返回前 10 条结果。
 
 ## 代码调用
 
@@ -40,24 +39,17 @@ const result = await mcpSearch('M5Stack CoreS3 规格参数', {
 });
 ```
 
-## MCP 工具参数
-
-`knowledge_search`：
-
-- `query`：必填，查询文本。
-- `is_chip`：可选，涉及芯片、datasheet、寄存器、底层电气特性时设为 `true`。
-- `filter_type`：可选，文档类型过滤；不确定时省略做全域检索。
-
 ## 推荐过滤策略
 
 | 场景 | filter_type |
 | --- | --- |
-| 产品规格、尺寸、接口、SKU | `product` |
+| 产品规格、尺寸、接口、SKU、供电、电气特性 | `product` |
 | 只看在售产品 | `product_no_eol` |
 | Arduino 代码、API、示例 | `arduino` |
 | UIFlow / UIFlow2 / MicroPython | `uiflow` |
 | ESP-IDF 组件、示例、配置 | `esp-idf` |
 | ESPHome 配置 | `esphome` |
+| Home Assistant / ESPHome 与 M5 产品搭配 | 先 `product`，再 `esphome` |
 | 故障排除、FAQ | `product` 或 `program` |
 
 ## 降级方案

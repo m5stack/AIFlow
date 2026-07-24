@@ -19,14 +19,16 @@ const FILTER_TYPES = new Set([
   'esphome',
 ]);
 
-// 解析命令行参数
-const args = process.argv.slice(2);
-if (args.length === 0) {
+function printUsage() {
   console.log('用法: node m5-search.mjs <查询内容> [选项]');
   console.log('选项:');
   console.log('  --filter <类型>    过滤类型: product/product_no_eol/program/arduino/uiflow/esp-idf/esphome');
   console.log('  --chip             查询芯片相关文档');
-  console.log('说明: MCP 服务固定返回前10条主检索结果，不再支持 --num。');
+}
+
+const args = process.argv.slice(2);
+if (args.length === 0) {
+  printUsage();
   process.exit(1);
 }
 
@@ -44,9 +46,10 @@ for (let i = 0; i < args.length; i++) {
     }
   } else if (args[i] === '--chip') {
     is_chip = true;
-  } else if (args[i] === '--num') {
-    i += 1;
-    console.warn('⚠️  --num 已废弃并会被忽略，MCP 服务固定返回前10条结果。');
+  } else if (args[i].startsWith('--')) {
+    console.error(`❌ 不支持的选项: ${args[i]}`);
+    printUsage();
+    process.exit(1);
   } else {
     query += (query ? ' ' : '') + args[i];
   }
@@ -57,19 +60,17 @@ if (!query.trim()) {
   process.exit(1);
 }
 
-// 执行查询
 console.log(`🔍 正在查询: ${query}`);
-console.log(`⚙️  参数: filter=${filter_type || 'all'}, is_chip=${is_chip}, limit=10`);
+console.log(`⚙️  参数: filter=${filter_type || 'all'}, is_chip=${is_chip}`);
 console.log('='.repeat(80));
 
 try {
   const result = await mcpSearch(query, { filter_type, is_chip });
   console.log('✅ 查询成功!');
   console.log('='.repeat(80));
-  
-  // 输出结果
+
   if (result && result.content && Array.isArray(result.content)) {
-    result.content.forEach((item, idx) => {
+    result.content.forEach((item) => {
       if (item.type === 'text') {
         console.log(item.text);
       }
@@ -77,7 +78,7 @@ try {
   } else {
     console.log(JSON.stringify(result, null, 2));
   }
-  
+
   process.exit(0);
 } catch (err) {
   console.error('❌ 查询失败:', err.message);

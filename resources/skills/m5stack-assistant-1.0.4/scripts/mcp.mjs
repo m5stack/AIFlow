@@ -9,7 +9,7 @@ import { URL } from 'url';
  * 简单的 MCP 查询函数 - 一键查询 M5Stack 知识库
  * 
  * @param {string} query - 查询内容
- * @param {object} options - 选项 {is_chip, filter_type}；num 已废弃并会被忽略
+ * @param {object} options - 选项 {is_chip, filter_type}
  * @returns {Promise<object>} 查询结果
  */
 export async function mcpSearch(query, options = {}) {
