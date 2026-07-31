@@ -9,6 +9,7 @@ export type {
   AgentStartTurnParams,
   AgentTurnCompleteEvent,
   ChatMessage,
+  ChatImageAttachment,
   ChatMessageRunStatus,
   ChatTokenUsage,
   GenerateConversationTitleParams,

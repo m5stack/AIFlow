@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { toast } from '@heroui/react'
 import type {
   ChatMessage,
+  ChatImageAttachment,
   ChatMessageRunStatus,
   ChatTokenUsage,
   GenerateConversationTitleParams,
@@ -956,11 +957,15 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
 
 export { flushPendingProjectFileWrite }
 
-export const createUserChatMessage = (content: string): ChatMessage => ({
+export const createUserChatMessage = (
+  content: string,
+  images: ChatImageAttachment[] = []
+): ChatMessage => ({
   id: `user-${Date.now()}`,
   role: 'user',
   content,
-  timestamp: formatTimestamp()
+  timestamp: formatTimestamp(),
+  images: images.length > 0 ? images : undefined
 })
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {

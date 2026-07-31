@@ -1,1 +1,1 @@
-export type { ChatCodeBlock, ChatMessage } from '../../../shared/types'
+export type { ChatCodeBlock, ChatImageAttachment, ChatMessage } from '../../../shared/types'

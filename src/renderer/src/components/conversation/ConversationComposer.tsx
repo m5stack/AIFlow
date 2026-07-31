@@ -66,6 +66,7 @@ export default function ConversationComposer({
       <div className="flex min-h-0 flex-col gap-2 overflow-hidden">
         <div className="flex min-h-[120px] flex-col overflow-hidden bg-transparent">
           <ConversationInput
+            key={session.selectedConvId ?? 'no-conversation'}
             {...restChatInputProps}
             models={models}
             selectedModel={selectedModel}

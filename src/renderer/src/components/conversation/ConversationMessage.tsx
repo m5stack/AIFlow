@@ -3,6 +3,7 @@ import { CheckIcon, ChevronDownIcon, CloseIcon } from '../icons/Icons'
 import ConversationMarkdown from './ConversationMarkdown'
 import type { ChatMessage as ChatMessageType, ChatCodeBlock } from '../../types/chat'
 import type { ChatMessageRunStatus } from '../../types/project'
+import { isChatImageMediaType } from '../../../../shared/chatImages'
 
 export type { ChatMessage } from '../../types/chat'
 
@@ -12,15 +13,34 @@ interface ConversationMessageProps {
 
 function MessageBody({ message }: { message: ChatMessageType }): React.JSX.Element {
   const isUser = message.role === 'user'
+  const images = (message.images ?? []).filter(
+    (image) => isChatImageMediaType(image.mediaType) && Boolean(image.data)
+  )
 
   return (
     <>
       {!isUser && message.reasoning && (
         <ReasoningBlock reasoning={message.reasoning} isStreaming={message.isStreaming} />
       )}
-      {isUser ? (
+      {images.length > 0 && (
+        <div
+          className={`conv-message-images ${images.length === 1 ? 'conv-message-images-single' : ''} ${message.content ? '' : 'conv-message-images-only'}`}
+        >
+          {images.map((image) => (
+            <figure key={image.id} className="conv-message-image">
+              <img
+                src={`data:${image.mediaType};base64,${image.data}`}
+                alt={image.name}
+                loading="lazy"
+              />
+              <figcaption title={image.name}>{image.name}</figcaption>
+            </figure>
+          ))}
+        </div>
+      )}
+      {isUser && message.content ? (
         <span className="whitespace-pre-wrap">{message.content}</span>
-      ) : message.content ? (
+      ) : !isUser && message.content ? (
         message.isStreaming ? (
           <span className="conv-streaming-text whitespace-pre-wrap">
             {message.content}
@@ -29,11 +49,11 @@ function MessageBody({ message }: { message: ChatMessageType }): React.JSX.Eleme
         ) : (
           <ConversationMarkdown content={message.content} />
         )
-      ) : message.isStreaming ? (
+      ) : !isUser && message.isStreaming ? (
         <span className="conv-streaming-text conv-streaming-placeholder">Generating reply…</span>
-      ) : (
+      ) : !isUser ? (
         <span className="text-muted italic">(No text reply)</span>
-      )}
+      ) : null}
       {message.codeBlocks?.map((block, i) => (
         <div key={i} className="mt-2 w-full">
           <CodeBlockView block={block} />

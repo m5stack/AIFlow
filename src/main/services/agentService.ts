@@ -10,11 +10,19 @@ import type {
   AgentStartTurnParams,
   AgentTurnCompleteEvent,
   AgentActiveDevice,
+  ChatImageAttachment,
   ChatMessage,
   ChatTokenUsage,
   GenerateConversationTitleParams,
   ProjectConversation
 } from '../../shared/types'
+import type { SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
+import {
+  CHAT_IMAGE_MAX_BYTES,
+  CHAT_IMAGE_MAX_COUNT,
+  estimateBase64Bytes,
+  isChatImageMediaType
+} from '../../shared/chatImages'
 import {
   DEVICE_TYPE,
   formatPinMapsForPrompt,
@@ -122,6 +130,59 @@ const buildActiveDevicePrompt = (activeDevice?: AgentActiveDevice): string | und
 
 const buildTurnPrompt = (userPrompt: string, turnPromptPrefix: string): string =>
   `${turnPromptPrefix}\n\n[USER REQUEST]\n${userPrompt}`
+
+const validateChatImages = (images: ChatImageAttachment[]): void => {
+  if (images.length > CHAT_IMAGE_MAX_COUNT) {
+    throw new Error(`A message can contain up to ${CHAT_IMAGE_MAX_COUNT} images.`)
+  }
+
+  for (const image of images) {
+    if (!image || !isChatImageMediaType(image.mediaType)) {
+      throw new Error('Unsupported image type. Use JPEG, PNG, GIF, or WebP.')
+    }
+    if (!image.data) {
+      throw new Error(`Image "${image.name || 'attachment'}" contains invalid data.`)
+    }
+    if (estimateBase64Bytes(image.data) > CHAT_IMAGE_MAX_BYTES) {
+      throw new Error(`Image "${image.name || 'attachment'}" is larger than 5 MB.`)
+    }
+    if (
+      image.data.length % 4 !== 0 ||
+      !/^[A-Za-z0-9+/]*={0,2}$/.test(image.data)
+    ) {
+      throw new Error(`Image "${image.name || 'attachment'}" contains invalid data.`)
+    }
+  }
+}
+
+const buildMultimodalPrompt = (
+  text: string,
+  images: ChatImageAttachment[]
+): string | AsyncIterable<SDKUserMessage> => {
+  if (images.length === 0) return text
+  validateChatImages(images)
+
+  return (async function* () {
+    yield {
+      type: 'user',
+      message: {
+        role: 'user',
+        content: [
+          ...images.map((image) => ({
+            type: 'image' as const,
+            source: {
+              type: 'base64' as const,
+              media_type: image.mediaType,
+              data: image.data
+            }
+          })),
+          { type: 'text' as const, text }
+        ]
+      },
+      parent_tool_use_id: null
+    }
+  })()
+}
 
 const textFromContent = (content: unknown): string => {
   if (typeof content === 'string') return content
@@ -402,6 +463,7 @@ export class AgentService {
       const activeDevicePrompt = buildActiveDevicePrompt(params.activeDevice)
       const turnContext = await this.projectService.getProjectTurnContext(params.projectId)
       const turnPrompt = buildTurnPrompt(params.prompt, turnContext.turnPromptPrefix)
+      const sdkPrompt = buildMultimodalPrompt(turnPrompt, params.images ?? [])
       await this.projectService.reconcileProjectSkills(params.projectId)
       console.log('[agent] start turn', {
         projectId: params.projectId,
@@ -410,7 +472,7 @@ export class AgentService {
         baseUrl: modelCredentials?.baseUrl ?? 'default'
       })
       currentQuery = query({
-        prompt: turnPrompt,
+        prompt: sdkPrompt,
         options: {
           pathToClaudeCodeExecutable: getClaudeExecutablePath(),
           cwd: this.projectService.getProjectFilesRoot(params.projectId),

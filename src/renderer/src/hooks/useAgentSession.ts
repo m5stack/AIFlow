@@ -15,6 +15,7 @@ import { groupMessagesIntoTurns, mergeAssistantParts } from '../utils/conversati
 import type {
   AgentActiveDevice,
   AgentPermissionRequest,
+  ChatImageAttachment,
   CreateUserModelConfigPayload,
   UpdateUserModelConfigPayload,
   UserModelConfig
@@ -259,7 +260,7 @@ export function useAgentSession() {
     return () => cancelAnimationFrame(frame)
   }, [selectedConvId, conversations.length])
 
-  const handleSend = (content: string): void => {
+  const handleSend = (content: string, images: ChatImageAttachment[]): void => {
     if (!activeProjectId || !selectedConvId) return
     if (!selectedModel) return
 
@@ -284,7 +285,7 @@ export function useAgentSession() {
         }
       }
     }
-    const userMsg = createUserChatMessage(content)
+    const userMsg = createUserChatMessage(content, images)
 
     if (
       selectedConv &&
@@ -311,6 +312,7 @@ export function useAgentSession() {
           projectId,
           convId,
           prompt: content,
+          images,
           activeDevice,
           modelConfigId: selectedModel
         })

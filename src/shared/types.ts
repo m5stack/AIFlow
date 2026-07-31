@@ -3,6 +3,16 @@ export interface ChatCodeBlock {
   code: string
 }
 
+export type ChatImageMediaType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
+
+export interface ChatImageAttachment {
+  id: string
+  name: string
+  mediaType: ChatImageMediaType
+  /** Raw base64 data without a data URL prefix. */
+  data: string
+}
+
 export type ChatMessageRunStatus = 'running' | 'done' | 'failed'
 
 export interface ChatTokenUsage {
@@ -60,6 +70,7 @@ export interface ChatMessage {
   reasoning?: string
   /** True while the message is still being streamed from the agent. */
   isStreaming?: boolean
+  images?: ChatImageAttachment[]
   codeBlocks?: ChatCodeBlock[]
   durationMs?: number
   tokenUsage?: ChatTokenUsage
@@ -182,6 +193,7 @@ export interface AgentStartTurnParams {
   projectId: string
   convId: string
   prompt: string
+  images?: ChatImageAttachment[]
   activeDevice?: AgentActiveDevice
   model?: string
   modelConfigId?: string
