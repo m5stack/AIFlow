@@ -47,8 +47,11 @@ $ npm run dev
 # For Windows
 $ npm run build:win
 
-# For macOS
+# For macOS (Apple Silicon)
 $ npm run build:mac
+
+# For macOS (Intel x64)
+$ npm run build:mac:x64
 
 # For Linux
 $ npm run build:linux

@@ -17,6 +17,7 @@
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && node scripts/prepare-claude-binary.js darwin arm64 && electron-builder --dir",
     "build:mac": "npm run build && node scripts/prepare-claude-binary.js darwin arm64 && electron-builder --mac --arm64",
+    "build:mac:x64": "npm run build && node scripts/prepare-claude-binary.js darwin x64 && electron-builder --mac dmg --x64 --config electron-builder.yml --config.dmg.artifactName='${productName}-${version}-x64.${ext}'",
     "build:win": "npm run build && node scripts/prepare-claude-binary.js win32 x64 && electron-builder --win --x64",
     "build:linux": "npm run build && node scripts/prepare-claude-binary.js linux x64 && electron-builder --linux --x64",
     "icons:mac": "node scripts/round-mac-icon.mjs",
