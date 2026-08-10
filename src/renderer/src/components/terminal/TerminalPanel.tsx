@@ -66,6 +66,7 @@ export default function TerminalPanel(): React.JSX.Element {
 
   const handleInterrupt = (): void => {
     if (!isConnected) return
+    terminalRef.current?.clearInput()
     sendData(MP_CTRL.INTERRUPT)
     terminalRef.current?.focus()
   }

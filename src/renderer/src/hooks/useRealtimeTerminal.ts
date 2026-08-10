@@ -49,10 +49,9 @@ export function useRealtimeTerminal(
   deviceId: string,
   { autoConnect = false }: UseRealtimeTerminalOptions = {}
 ): UseRealtimeTerminalResult {
-  const [status, setStatus] = useState<RealtimeTerminalStatus>('idle')
+  const [status, setStatusState] = useState<RealtimeTerminalStatus>('idle')
   const [errorMessage, setErrorMessage] = useState('')
   const statusRef = useRef<RealtimeTerminalStatus>('idle')
-  statusRef.current = status
   const wsRef = useRef<WebSocket | null>(null)
   const terminalHandlerRef = useRef<((data: string) => void) | null>(null)
   const pendingOutputRef = useRef<string[]>([])
@@ -63,6 +62,12 @@ export function useRealtimeTerminal(
   const replInitOutputBufferRef = useRef('')
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const sessionDeviceIdRef = useRef('')
+  const autoConnectDeviceIdRef = useRef('')
+
+  const setTerminalStatus = useCallback((nextStatus: RealtimeTerminalStatus): void => {
+    statusRef.current = nextStatus
+    setStatusState(nextStatus)
+  }, [])
 
   const cancelReplInitRetry = useCallback((): void => {
     replInitSessionRef.current += 1
@@ -163,8 +168,7 @@ export function useRealtimeTerminal(
 
     await initReplSession(sendRawPayload, {
       shouldContinue: () =>
-        sessionId === replInitSessionRef.current &&
-        wsRef.current?.readyState === WebSocket.OPEN,
+        sessionId === replInitSessionRef.current && wsRef.current?.readyState === WebSocket.OPEN,
       hasResponse: () => replInitGotResponseRef.current
     })
   }, [sendRawPayload])
@@ -244,7 +248,7 @@ export function useRealtimeTerminal(
         if (!options?.silent) {
           sessionDeviceIdRef.current = ''
         }
-        setStatus('idle')
+        setTerminalStatus('idle')
         setErrorMessage('')
         return
       }
@@ -262,35 +266,34 @@ export function useRealtimeTerminal(
       if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
         ws.close()
       }
-      setStatus('idle')
+      setTerminalStatus('idle')
       setErrorMessage('')
     },
-    [cancelReplInitRetry, clearHeartbeat, writeSystemLine]
+    [cancelReplInitRetry, clearHeartbeat, setTerminalStatus, writeSystemLine]
   )
 
   const connect = useCallback(async (): Promise<boolean> => {
     const trimmedDeviceId = deviceId.trim()
     if (!trimmedDeviceId) {
-      setStatus('error')
+      setTerminalStatus('error')
       setErrorMessage('Device is required')
       return false
     }
 
-    const previousDeviceId = sessionDeviceIdRef.current
     const wasActive =
       statusRef.current === 'connected' ||
       statusRef.current === 'connecting' ||
       wsRef.current?.readyState === WebSocket.OPEN ||
       wsRef.current?.readyState === WebSocket.CONNECTING
 
-    if (wasActive && previousDeviceId) {
+    if (wasActive) {
       writeSystemLine(formatTerminalServerMessage('disconnected'))
     }
 
     await disconnect({ silent: true })
 
     const attemptId = ++connectAttemptRef.current
-    setStatus('connecting')
+    setTerminalStatus('connecting')
     setErrorMessage('')
     writeSystemLine(formatTerminalServerMessage('connecting'))
 
@@ -316,14 +319,14 @@ export function useRealtimeTerminal(
                 if (connected) return
                 connected = true
                 sessionDeviceIdRef.current = trimmedDeviceId
-                setStatus('connected')
+                setTerminalStatus('connected')
                 writeSystemLine(formatTerminalServerMessage('connected'))
                 startHeartbeat()
                 resolve()
               })
             } catch (error) {
               setErrorMessage(error instanceof Error ? error.message : 'Connection error')
-              setStatus('error')
+              setTerminalStatus('error')
               ws.close()
               reject(error instanceof Error ? error : new Error('Connection error'))
             }
@@ -346,7 +349,7 @@ export function useRealtimeTerminal(
             }
             writeSystemLine(formatTerminalServerMessage('disconnected'))
             sessionDeviceIdRef.current = ''
-            setStatus('idle')
+            setTerminalStatus('idle')
           }
         }),
         new Promise<never>((_, reject) => {
@@ -380,7 +383,7 @@ export function useRealtimeTerminal(
       const message = error instanceof Error ? error.message : 'Connection failed'
       writeSystemLine(formatTerminalServerMessage('failed', message))
       setErrorMessage(message)
-      setStatus('error')
+      setTerminalStatus('error')
       return false
     }
   }, [
@@ -389,6 +392,7 @@ export function useRealtimeTerminal(
     disconnect,
     handleWsMessage,
     scheduleReplInit,
+    setTerminalStatus,
     startHeartbeat,
     writeSystemLine
   ])
@@ -412,14 +416,18 @@ export function useRealtimeTerminal(
   }, [disconnect])
 
   useEffect(() => {
-    if (!autoConnect || !deviceId.trim()) {
+    const trimmedDeviceId = deviceId.trim()
+    if (!autoConnect || !trimmedDeviceId) {
+      autoConnectDeviceIdRef.current = ''
       void disconnect()
       return
     }
 
     let cancelled = false
-    void connect().then(() => {
-      if (cancelled) return
+    queueMicrotask(() => {
+      if (cancelled || autoConnectDeviceIdRef.current === trimmedDeviceId) return
+      autoConnectDeviceIdRef.current = trimmedDeviceId
+      void connect()
     })
 
     return () => {
