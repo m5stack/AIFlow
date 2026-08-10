@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import { randomUUID } from 'crypto'
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'path'
-import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'fs/promises'
+import { link, lstat, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'fs/promises'
 import { realpathSync } from 'fs'
 import type {
   ChatMessage,
@@ -27,6 +27,7 @@ const CHATS_DIR_NAME = 'chats'
 const ASSETS_DIR_NAME = 'assets'
 const DEFAULT_LANGUAGE = 'python'
 const DEFAULT_FILE_NAME = 'main.py'
+const MAIN_OTA_TEMP_FILE_NAME = 'main_ota_temp.py'
 const NEW_CHAT_TITLE = 'New chat'
 const NEW_CHAT_TITLE_PATTERN = /^New chat(?: \d+)?$/
 const FILE_TREE_MAX_ENTRIES = 200
@@ -62,7 +63,7 @@ const DEVICE_RESOURCE_RULES_CRITICAL = [
   '- When referencing audio in device code, use ONLY "/flash/res/audio/<filename>" (e.g. "/flash/res/audio/beep.wav").',
   '- NEVER use bare filenames (e.g. "logo.png"), project-relative paths (e.g. "img/logo.png"), or /flash/ paths missing res/ (e.g. "/flash/img/logo.png").',
   '- NEVER use /flash/res/<filename> directly for images or audio — the img/ or audio/ segment is required (e.g. NOT "/flash/res/logo.png").',
-  '- NEVER invent resource paths that are not listed in the current project files.'
+  '- NEVER invent resource paths that are not listed in the current project files or returned by an AIFlow internal resource tool during this turn.'
 ].join('\n')
 
 const DEVICE_RESOURCE_PATH_GUIDE = [
@@ -80,6 +81,9 @@ type ProjectIndex = {
 
 const nowIso = (): string => new Date().toISOString()
 const ATOMIC_RENAME_RETRY_DELAYS_MS = [25, 50, 100, 200] as const
+
+const isTemporaryProjectEntry = (name: string): boolean =>
+  name.endsWith('.tmp') || name === MAIN_OTA_TEMP_FILE_NAME
 
 const uniqueConversationTitle = (
   desiredTitle: string,
@@ -146,6 +150,61 @@ const isMissingFileError = (error: unknown): boolean =>
   error !== null &&
   'code' in error &&
   (error as NodeJS.ErrnoException).code === 'ENOENT'
+
+const isAlreadyExistsError = (error: unknown): boolean =>
+  typeof error === 'object' &&
+  error !== null &&
+  'code' in error &&
+  (error as NodeJS.ErrnoException).code === 'EEXIST'
+
+const ensureDirectoryTreeWithoutSymlinks = async (
+  basePath: string,
+  directoryPath: string
+): Promise<void> => {
+  if (!isPathInside(basePath, directoryPath)) throw new Error('Resource path escapes project.')
+
+  const relativePath = relative(basePath, directoryPath)
+  let currentPath = basePath
+  for (const segment of relativePath ? relativePath.split(sep) : []) {
+    currentPath = join(currentPath, segment)
+    try {
+      const entry = await lstat(currentPath)
+      if (entry.isSymbolicLink()) throw new Error('Resource path cannot contain symbolic links.')
+      if (!entry.isDirectory()) throw new Error('Resource parent path is not a directory.')
+    } catch (error) {
+      if (!isMissingFileError(error)) throw error
+      try {
+        await mkdir(currentPath)
+      } catch (mkdirError) {
+        if (!isAlreadyExistsError(mkdirError)) throw mkdirError
+      }
+      const createdEntry = await lstat(currentPath)
+      if (createdEntry.isSymbolicLink()) {
+        throw new Error('Resource path cannot contain symbolic links.')
+      }
+      if (!createdEntry.isDirectory()) throw new Error('Resource parent path is not a directory.')
+    }
+  }
+}
+
+const writeFileExclusiveAtomic = async (
+  filePath: string,
+  data: Buffer
+): Promise<'created' | 'exists'> => {
+  const tempPath = `${filePath}.${process.pid}.${randomUUID()}.tmp`
+  try {
+    await writeFile(tempPath, data, { flag: 'wx' })
+    try {
+      await link(tempPath, filePath)
+      return 'created'
+    } catch (error) {
+      if (isAlreadyExistsError(error)) return 'exists'
+      throw error
+    }
+  } finally {
+    await rm(tempPath, { force: true }).catch(() => undefined)
+  }
+}
 
 const isValidManifest = (value: unknown): value is ProjectManifest => {
   if (!value || typeof value !== 'object') return false
@@ -436,6 +495,48 @@ export class ProjectService {
       manifest.updatedAt = nowIso()
     })
     return this.listFiles(projectId)
+  }
+
+  async writeGeneratedResource(
+    projectId: string,
+    filePath: string,
+    data: Buffer
+  ): Promise<'created' | 'reused' | 'conflict'> {
+    const absPath = this.resolveProjectFile(projectId, filePath)
+    const projectRootEntry = await lstat(this.projectRoot(projectId))
+    if (projectRootEntry.isSymbolicLink() || !projectRootEntry.isDirectory()) {
+      throw new Error('Project root must be a regular directory.')
+    }
+    const filesRoot = this.filesRoot(projectId)
+    const filesRootEntry = await lstat(filesRoot)
+    if (filesRootEntry.isSymbolicLink() || !filesRootEntry.isDirectory()) {
+      throw new Error('Project files root must be a regular directory.')
+    }
+    await ensureDirectoryTreeWithoutSymlinks(filesRoot, dirname(absPath))
+
+    const inspectExisting = async (): Promise<'reused' | 'conflict' | undefined> => {
+      try {
+        const entry = await lstat(absPath)
+        if (entry.isSymbolicLink()) throw new Error('Resource path cannot be a symbolic link.')
+        if (!entry.isFile()) return 'conflict'
+        const existing = await readFile(absPath)
+        return existing.equals(data) ? 'reused' : 'conflict'
+      } catch (error) {
+        if (isMissingFileError(error)) return undefined
+        throw error
+      }
+    }
+
+    const existingResult = await inspectExisting()
+    if (existingResult) return existingResult
+
+    const writeResult = await writeFileExclusiveAtomic(absPath, data)
+    if (writeResult === 'exists') return (await inspectExisting()) ?? 'conflict'
+
+    await this.updateManifest(projectId, (manifest) => {
+      manifest.updatedAt = nowIso()
+    })
+    return 'created'
   }
 
   async readProjectFileDataUrl(projectId: string, filePath: string): Promise<string> {
@@ -766,7 +867,7 @@ export class ProjectService {
     type SortableNode = ProjectFileNode & { mtime?: number }
     const nodes: SortableNode[] = await Promise.all(
       entries
-        .filter((entry) => !entry.name.startsWith('.'))
+        .filter((entry) => !entry.name.startsWith('.') && !isTemporaryProjectEntry(entry.name))
         .map(async (entry) => {
           const childRelative = relativeDir ? `${relativeDir}/${entry.name}` : entry.name
           if (entry.isDirectory()) {
@@ -797,7 +898,11 @@ export class ProjectService {
         if (!aIsMain && bIsMain) return 1
         return (a.mtime ?? 0) - (b.mtime ?? 0)
       })
-      .map(({ mtime: _mtime, ...node }) => node)
+      .map((node) => {
+        const projectNode = { ...node }
+        delete projectNode.mtime
+        return projectNode
+      })
   }
 
   private collectFileTreeLines(nodes: ProjectFileNode[], lines: string[]): void {

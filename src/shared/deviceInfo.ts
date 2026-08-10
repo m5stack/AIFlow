@@ -326,7 +326,11 @@ export const getScreenSize = (deviceType: string): DeviceScreenSize => {
 
 /** Map UI model/name (e.g. AtomS3R) to `DEVICE_TYPE` keys used by pin maps. */
 export function normalizeDeviceTypeForPinMap(input: string): string {
-  const s = input.trim().toLowerCase().replace(/\s+/g, '')
+  const s = input
+    .trim()
+    .replace(/\s+v\d+(?:\.\d+)*$/i, '')
+    .toLowerCase()
+    .replace(/\s+/g, '')
   const all = Object.values(DEVICE_TYPE) as string[]
   if (all.includes(s)) return s
   const compact = s.replace(/-/g, '')

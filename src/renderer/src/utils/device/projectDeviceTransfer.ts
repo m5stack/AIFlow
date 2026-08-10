@@ -1,4 +1,3 @@
-import type { ProjectFileNode } from '../../types/project'
 import { downloadFiles } from '../../api/device'
 import { requestDeviceFileTreeRefresh } from '../../stores/deviceFileTreeStore'
 import { buildDeviceAppFile, buildDeviceFiles, getMainPyContent } from '../project/projectRunFiles'
@@ -8,7 +7,6 @@ export interface ProjectDeviceTransferArgs {
   projectName: string
   deviceId: string
   clientId: string
-  fileNodes: ProjectFileNode[]
   selectedPath?: string
   selectedContent?: string
 }
@@ -26,16 +24,9 @@ export const transferProjectFilesToDevice = async (
   args: ProjectDeviceTransferArgs,
   options: ProjectDeviceTransferOptions
 ): Promise<ProjectDeviceTransferResult> => {
-  const {
-    projectId,
-    projectName,
-    deviceId,
-    clientId,
-    fileNodes,
-    selectedPath,
-    selectedContent = ''
-  } = args
+  const { projectId, projectName, deviceId, clientId, selectedPath, selectedContent = '' } = args
   const { includeAppFile } = options
+  const fileNodes = await window.ipc.project.listFiles(projectId)
 
   const mainPyContent = (await getMainPyContent(projectId, selectedPath, selectedContent)).trim()
   if (!mainPyContent) return { mainPyContent: '', transferred: false }

@@ -52,6 +52,9 @@ const ipc: IpcAPI = {
     delete(projectId: string): Promise<void> {
       return ipcRenderer.invoke('project:delete', projectId)
     },
+    listFiles(projectId: string): Promise<ProjectFileNode[]> {
+      return ipcRenderer.invoke('project:listFiles', projectId)
+    },
     readFile(projectId: string, filePath: string): Promise<ProjectFileContent> {
       return ipcRenderer.invoke('project:readFile', projectId, filePath)
     },

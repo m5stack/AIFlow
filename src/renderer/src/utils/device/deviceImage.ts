@@ -101,6 +101,6 @@ const MODEL_IMAGE: Record<string, string> = {
 }
 
 export function resolveDeviceImage(model: string): string {
-  const normalized = normalizeDeviceTypeForPinMap(model?.replace(/\s+v[\d.]+$/, '').trim() ?? '')
+  const normalized = normalizeDeviceTypeForPinMap(model ?? '')
   return MODEL_IMAGE[normalized] ?? imgUnknown
 }

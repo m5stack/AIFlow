@@ -275,7 +275,11 @@ interface ProjectStoreState {
     tokenUsage: ChatTokenUsage
   ) => void
   handleAgentMessage: (projectId: string, convId: string, message: ChatMessage) => void
-  handleAgentFilesChanged: (projectId: string, paths: string[]) => Promise<void>
+  handleAgentFilesChanged: (
+    projectId: string,
+    paths: string[],
+    options?: { pulseCode?: boolean }
+  ) => Promise<void>
   reloadActiveCodeFile: (projectId: string) => Promise<void>
 }
 
@@ -750,7 +754,6 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         projectName: project.projectName,
         deviceId: device.id,
         clientId: useClientIdStore.getState().clientId,
-        fileNodes: project.files ?? [],
         includeMainPyInDownload: false
       })
 
@@ -921,8 +924,8 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     })
   },
 
-  handleAgentFilesChanged: async (projectId, paths) => {
-    if (paths.length > 0) {
+  handleAgentFilesChanged: async (projectId, paths, options) => {
+    if (paths.length > 0 && options?.pulseCode !== false) {
       useFlowStatusStore.getState().pulseCode()
     }
     await flushPendingProjectFileWrite()

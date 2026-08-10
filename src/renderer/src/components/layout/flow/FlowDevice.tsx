@@ -194,7 +194,6 @@ export default function FlowDevice(): React.JSX.Element {
         projectName: activeProject.projectName,
         deviceId: selectedDevice.id,
         clientId,
-        fileNodes: activeProject.files ?? [],
         selectedPath: codeFilePath ?? undefined,
         selectedContent: selectedFileContent
       })

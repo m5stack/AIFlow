@@ -73,7 +73,6 @@ export default function CodePanel(): React.JSX.Element {
         projectName: activeProject.projectName,
         deviceId: selectedDevice.id,
         clientId,
-        fileNodes: activeProject.files ?? [],
         selectedPath: codeFilePath ?? undefined,
         selectedContent: selectedFileContent,
         includeMainPyInDownload

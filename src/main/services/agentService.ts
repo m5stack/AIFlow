@@ -17,12 +17,7 @@ import type {
   ProjectConversation
 } from '../../shared/types'
 import type { SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
-import {
-  CHAT_IMAGE_MAX_BYTES,
-  CHAT_IMAGE_MAX_COUNT,
-  estimateBase64Bytes,
-  isChatImageMediaType
-} from '../../shared/chatImages'
+import { CHAT_IMAGE_MCP_SERVER_NAME, validateChatImages } from '../../shared/chatImages'
 import {
   DEVICE_TYPE,
   formatPinMapsForPrompt,
@@ -38,6 +33,7 @@ import {
 import type { UserModelService } from './userModelService'
 import type { McpService } from './mcpService'
 import type { TokenUsageService } from './tokenUsageService'
+import { createChatImageMcpContext } from './chatImageResourceService'
 import {
   buildFallbackConversationTitle,
   generateConversationTitleRequest,
@@ -131,30 +127,6 @@ const buildActiveDevicePrompt = (activeDevice?: AgentActiveDevice): string | und
 const buildTurnPrompt = (userPrompt: string, turnPromptPrefix: string): string =>
   `${turnPromptPrefix}\n\n[USER REQUEST]\n${userPrompt}`
 
-const validateChatImages = (images: ChatImageAttachment[]): void => {
-  if (images.length > CHAT_IMAGE_MAX_COUNT) {
-    throw new Error(`A message can contain up to ${CHAT_IMAGE_MAX_COUNT} images.`)
-  }
-
-  for (const image of images) {
-    if (!image || !isChatImageMediaType(image.mediaType)) {
-      throw new Error('Unsupported image type. Use JPEG, PNG, GIF, or WebP.')
-    }
-    if (!image.data) {
-      throw new Error(`Image "${image.name || 'attachment'}" contains invalid data.`)
-    }
-    if (estimateBase64Bytes(image.data) > CHAT_IMAGE_MAX_BYTES) {
-      throw new Error(`Image "${image.name || 'attachment'}" is larger than 5 MB.`)
-    }
-    if (
-      image.data.length % 4 !== 0 ||
-      !/^[A-Za-z0-9+/]*={0,2}$/.test(image.data)
-    ) {
-      throw new Error(`Image "${image.name || 'attachment'}" contains invalid data.`)
-    }
-  }
-}
-
 const buildMultimodalPrompt = (
   text: string,
   images: ChatImageAttachment[]
@@ -168,14 +140,20 @@ const buildMultimodalPrompt = (
       message: {
         role: 'user',
         content: [
-          ...images.map((image) => ({
-            type: 'image' as const,
-            source: {
-              type: 'base64' as const,
-              media_type: image.mediaType,
-              data: image.data
+          ...images.flatMap((image, index) => [
+            {
+              type: 'text' as const,
+              text: `[AIFlow attachment ${index + 1}: id=${image.id}, name=${JSON.stringify(image.name)}, mediaType=${image.mediaType}]`
+            },
+            {
+              type: 'image' as const,
+              source: {
+                type: 'base64' as const,
+                media_type: image.mediaType,
+                data: image.data
+              }
             }
-          })),
+          ]),
           { type: 'text' as const, text }
         ]
       },
@@ -441,7 +419,7 @@ export class AgentService {
     let currentQuery: (QueryHandle & AsyncIterable<unknown>) | undefined
 
     try {
-      const [{ query }, conversation, modelCredentials, mcpServers] = await Promise.all([
+      const [{ query }, conversation, modelCredentials, configuredMcpServers] = await Promise.all([
         import('@anthropic-ai/claude-agent-sdk'),
         this.projectService.getConversation(params.projectId, params.convId),
         params.modelConfigId
@@ -464,6 +442,25 @@ export class AgentService {
       const turnContext = await this.projectService.getProjectTurnContext(params.projectId)
       const turnPrompt = buildTurnPrompt(params.prompt, turnContext.turnPromptPrefix)
       const sdkPrompt = buildMultimodalPrompt(turnPrompt, params.images ?? [])
+      const chatImageMcp = await createChatImageMcpContext({
+        projectId: params.projectId,
+        conversation,
+        currentImages: params.images ?? [],
+        activeDevice: params.activeDevice,
+        projectService: this.projectService,
+        onResourceSaved: (resource) => {
+          this.sendEvent('filesChanged', {
+            projectId: params.projectId,
+            convId: params.convId,
+            paths: [resource.projectPath],
+            autoRunEligible: false
+          })
+        }
+      })
+      const mcpServers = {
+        ...configuredMcpServers,
+        ...(chatImageMcp ? { [CHAT_IMAGE_MCP_SERVER_NAME]: chatImageMcp.server } : {})
+      }
       await this.projectService.reconcileProjectSkills(params.projectId)
       console.log('[agent] start turn', {
         projectId: params.projectId,
@@ -493,6 +490,7 @@ export class AgentService {
               'When the user asks you to create or modify project files, use the available file editing tools directly.',
               'Do not tell the user to manually edit files unless a tool call fails with an unrecoverable error.',
               'Do not modify files outside the current working directory.',
+              chatImageMcp?.systemPrompt,
               turnContext.systemFileTreePrompt,
               activeDevicePrompt,
               '=== CRITICAL RULES (override any conflicting path assumptions) ===',
@@ -510,6 +508,10 @@ export class AgentService {
             input: Record<string, unknown>,
             ctx: { toolUseID: string; title?: string; description?: string; blockedPath?: string }
           ) => {
+            if (chatImageMcp?.autoAllowedToolNames.has(toolName)) {
+              return { behavior: 'allow' as const, updatedInput: input }
+            }
+
             const requestedPath = extractToolPath(toolName, input)
             const isReadTool = AUTO_ALLOWED_FILE_TOOLS.has(toolName)
             if (requestedPath) {

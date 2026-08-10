@@ -166,10 +166,12 @@ export function useAgentSession() {
       setActivityByConvId((prev) => ({ ...prev, [event.convId]: event.label }))
     })
     const offFilesChanged = window.ipc.agent.onFilesChanged((event) => {
-      if (event.paths.length > 0) {
+      if (event.paths.length > 0 && event.autoRunEligible !== false) {
         filesChangedByConvIdRef.current[event.convId] = true
       }
-      void handleAgentFilesChanged(event.projectId, event.paths)
+      void handleAgentFilesChanged(event.projectId, event.paths, {
+        pulseCode: event.autoRunEligible !== false
+      })
     })
     const offTurnComplete = window.ipc.agent.onTurnComplete((event) => {
       const userMessageId = thinkingMetaRef.current[event.convId]?.turnId

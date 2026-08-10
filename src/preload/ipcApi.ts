@@ -44,6 +44,7 @@ export interface ProjectAPI {
   migrateFromLegacy(projects: LegacyProjectPayload[]): Promise<ProjectItem[]>
   rename(projectId: string, name: string): Promise<ProjectItem>
   delete(projectId: string): Promise<void>
+  listFiles(projectId: string): Promise<ProjectFileNode[]>
   readFile(projectId: string, filePath: string): Promise<ProjectFileContent>
   writeFile(projectId: string, filePath: string, content: string): Promise<void>
   createFile(projectId: string, filePath: string, content?: string): Promise<ProjectFileNode[]>

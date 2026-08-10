@@ -9,6 +9,7 @@ import {
   type McpServerItem,
   type UpdateMcpServerPayload
 } from '../../shared/types'
+import { CHAT_IMAGE_MCP_SERVER_NAME } from '../../shared/chatImages'
 
 type McpServerConfigFile = {
   servers: McpServerItem[]
@@ -46,6 +47,9 @@ const normalizeName = (name: string): string => {
   const trimmed = name.trim()
   if (trimmed && !MCP_SERVER_NAME_PATTERN.test(trimmed)) {
     throw new Error(MCP_SERVER_NAME_ERROR)
+  }
+  if (trimmed === CHAT_IMAGE_MCP_SERVER_NAME) {
+    throw new Error(`MCP server name "${trimmed}" is reserved by AIFlow.`)
   }
   return trimmed
 }

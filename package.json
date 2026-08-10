@@ -40,7 +40,9 @@
     "react-markdown": "^10.1.0",
     "recharts": "^3.9.2",
     "remark-gfm": "^4.0.1",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.3.0",
+    "zod": "^4.0.0",
     "zustand": "^5.0.13"
   },
   "optionalDependencies": {
@@ -69,7 +71,6 @@
     "prettier": "^3.7.4",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "sharp": "^0.34.5",
     "typescript": "^5.9.3",
     "vite": "^7.2.6"
   }

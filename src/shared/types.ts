@@ -241,6 +241,8 @@ export interface AgentFilesChangedEvent {
   projectId: string
   convId: string
   paths: string[]
+  /** False for resource-only changes that should refresh the UI without running existing code. */
+  autoRunEligible?: boolean
 }
 
 export interface AgentTurnCompleteEvent {
