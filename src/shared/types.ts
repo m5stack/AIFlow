@@ -81,6 +81,7 @@ export interface ProjectConversation {
   id: string
   title: string
   claudeSessionId?: string
+  activePromptTemplateId?: string
   updatedAt: string
   messages: ChatMessage[]
 }
@@ -106,6 +107,7 @@ export interface ProjectItem {
   projectName: string
   rootPath: string
   activeDeviceId?: string
+  lastSelectedPromptTemplateId?: string
   conversations: ProjectConversation[]
   files: ProjectFileNode[]
   activeFilePath?: string
@@ -119,6 +121,7 @@ export interface ProjectManifest {
   projectName: string
   rootPath: string
   activeDeviceId?: string
+  lastSelectedPromptTemplateId?: string
   language: string
   activeFilePath?: string
   createdAt: string
@@ -166,6 +169,23 @@ export interface UpdateUserModelConfigPayload {
   apiKey?: string
   baseUrl?: string
   disableNonessentialTraffic?: boolean
+}
+
+export interface PromptTemplate {
+  id: string
+  name: string
+  content: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreatePromptTemplatePayload {
+  name: string
+  content: string
+}
+
+export interface UpdatePromptTemplatePayload extends CreatePromptTemplatePayload {
+  id: string
 }
 
 export interface ModelConnectionTestPayload {

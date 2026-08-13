@@ -15,6 +15,7 @@ import type {
 import { AgentService } from '../services/agentService'
 import type { ProjectService } from '../services/projectService'
 import type { UserModelService } from '../services/userModelService'
+import type { PromptTemplateService } from '../services/promptTemplateService'
 import type { McpService } from '../services/mcpService'
 import type { TokenUsageService } from '../services/tokenUsageService'
 
@@ -40,12 +41,14 @@ export function registerAgentIpc(
   mainWindow: BrowserWindow,
   projectService: ProjectService,
   userModelService: UserModelService,
+  promptTemplateService: PromptTemplateService,
   mcpService: McpService,
   tokenUsageService: TokenUsageService
 ): AgentService {
   const agentService = new AgentService(
     projectService,
     userModelService,
+    promptTemplateService,
     mcpService,
     tokenUsageService,
     (channel, payload) => {

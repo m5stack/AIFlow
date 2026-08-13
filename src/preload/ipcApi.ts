@@ -22,6 +22,9 @@ import type {
   ProjectFileContent,
   ProjectFileNode,
   ProjectItem,
+  PromptTemplate,
+  CreatePromptTemplatePayload,
+  UpdatePromptTemplatePayload,
   SerialPortInfo,
   SkillItem,
   McpServerItem,
@@ -58,6 +61,11 @@ export interface ProjectAPI {
   addConversation(projectId: string): Promise<ProjectConversation>
   deleteConversation(projectId: string, convId: string): Promise<void>
   renameConversation(projectId: string, convId: string, title: string): Promise<ProjectConversation>
+  setConversationPromptTemplate(
+    projectId: string,
+    convId: string,
+    promptTemplateId?: string
+  ): Promise<ProjectConversation>
   appendConversationMessages(
     projectId: string,
     convId: string,
@@ -106,6 +114,13 @@ export interface ModelAPI {
   test(payload: ModelConnectionTestPayload): Promise<ModelConnectionTestResult>
 }
 
+export interface PromptTemplateAPI {
+  list(): Promise<PromptTemplate[]>
+  create(payload: CreatePromptTemplatePayload): Promise<PromptTemplate>
+  update(payload: UpdatePromptTemplatePayload): Promise<PromptTemplate>
+  delete(templateId: string): Promise<void>
+}
+
 export interface FirmwareAPI {
   generateNvsFromCsv(csvText: string, size: number | string): Promise<Uint8Array>
   readBundled(fileName: string): Promise<Uint8Array>
@@ -139,6 +154,7 @@ export interface IpcAPI {
   project: ProjectAPI
   agent: AgentAPI
   model: ModelAPI
+  promptTemplate: PromptTemplateAPI
   serial: SerialAPI
   firmware: FirmwareAPI
   clientId: ClientIdAPI

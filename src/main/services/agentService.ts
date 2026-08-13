@@ -31,6 +31,7 @@ import {
   type ProjectService
 } from './projectService'
 import type { UserModelService } from './userModelService'
+import type { PromptTemplateService } from './promptTemplateService'
 import type { McpService } from './mcpService'
 import type { TokenUsageService } from './tokenUsageService'
 import { createChatImageMcpContext } from './chatImageResourceService'
@@ -39,6 +40,7 @@ import {
   generateConversationTitleRequest,
   normalizeConversationTitle
 } from './conversationTitleGenerator'
+import { buildTurnPrompt } from './agentPrompt'
 
 type QueryHandle = {
   close(): void
@@ -123,9 +125,6 @@ const buildActiveDevicePrompt = (activeDevice?: AgentActiveDevice): string | und
 
   return lines.filter(Boolean).join('\n')
 }
-
-const buildTurnPrompt = (userPrompt: string, turnPromptPrefix: string): string =>
-  `${turnPromptPrefix}\n\n[USER REQUEST]\n${userPrompt}`
 
 const buildMultimodalPrompt = (
   text: string,
@@ -306,10 +305,11 @@ export class AgentService {
   constructor(
     private readonly projectService: ProjectService,
     private readonly userModelService: UserModelService,
+    private readonly promptTemplateService: PromptTemplateService,
     private readonly mcpService: McpService,
     private readonly tokenUsageService: TokenUsageService,
     private readonly sendEvent: AgentEventSender
-  ) { }
+  ) {}
 
   async startTurn(params: AgentStartTurnParams): Promise<{ turnId: string }> {
     const turnId = `turn-${Date.now()}-${Math.random().toString(16).slice(2)}`
@@ -440,7 +440,14 @@ export class AgentService {
       })
       const activeDevicePrompt = buildActiveDevicePrompt(params.activeDevice)
       const turnContext = await this.projectService.getProjectTurnContext(params.projectId)
-      const turnPrompt = buildTurnPrompt(params.prompt, turnContext.turnPromptPrefix)
+      const activePromptTemplate = conversation.activePromptTemplateId
+        ? await this.promptTemplateService.getTemplate(conversation.activePromptTemplateId)
+        : undefined
+      const turnPrompt = buildTurnPrompt(
+        params.prompt,
+        turnContext.turnPromptPrefix,
+        activePromptTemplate?.content
+      )
       const sdkPrompt = buildMultimodalPrompt(turnPrompt, params.images ?? [])
       const chatImageMcp = await createChatImageMcpContext({
         projectId: params.projectId,
@@ -551,9 +558,9 @@ export class AgentService {
             return response.behavior === 'allow'
               ? { behavior: 'allow' as const, updatedInput: input }
               : {
-                behavior: 'deny' as const,
-                message: response.message || 'User denied permission.'
-              }
+                  behavior: 'deny' as const,
+                  message: response.message || 'User denied permission.'
+                }
           }
         }
       }) as QueryHandle & AsyncIterable<unknown>
@@ -562,6 +569,7 @@ export class AgentService {
 
       let sessionId = conversation.claudeSessionId
       let persistedSessionId = conversation.claudeSessionId
+      let handledResult = false
       for await (const sdkMessage of currentQuery) {
         const message = sdkMessage as Record<string, unknown>
         console.log('[agent] message', {
@@ -573,12 +581,12 @@ export class AgentService {
               : undefined,
           deltaType:
             message.type === 'stream_event' &&
-              (message.event as { type?: unknown } | undefined)?.type === 'content_block_delta'
+            (message.event as { type?: unknown } | undefined)?.type === 'content_block_delta'
               ? ((message.event as { delta?: { type?: unknown } }).delta?.type ?? undefined)
               : undefined,
           blockType:
             message.type === 'stream_event' &&
-              (message.event as { type?: unknown } | undefined)?.type === 'content_block_start'
+            (message.event as { type?: unknown } | undefined)?.type === 'content_block_start'
               ? ((message.event as { content_block?: { type?: unknown } }).content_block?.type ??
                 undefined)
               : undefined,
@@ -593,14 +601,18 @@ export class AgentService {
           )
           persistedSessionId = sessionId
         }
+        if (message.type === 'result' && handledResult) continue
         await this.handleSdkMessage(params, message)
+        if (message.type === 'result') handledResult = true
       }
 
-      this.sendEvent('turnComplete', {
-        projectId: params.projectId,
-        convId: params.convId,
-        sessionId
-      })
+      if (!handledResult) {
+        this.sendEvent('turnComplete', {
+          projectId: params.projectId,
+          convId: params.convId,
+          sessionId
+        })
+      }
     } catch (error) {
       this.sendEvent('error', {
         projectId: params.projectId,

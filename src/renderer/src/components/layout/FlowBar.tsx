@@ -1,4 +1,7 @@
 import React, { useLayoutEffect, useRef } from 'react'
+import ConversationPromptSelector, {
+  type ConversationPromptSelectorProps
+} from '../conversation/ConversationPromptSelector'
 import FlowColumn from './flow/FlowColumn'
 import FlowArrow from './flow/FlowArrow'
 import FlowConversationNode from './flow/FlowConversationNode'
@@ -7,7 +10,11 @@ import FlowCodeNode from './flow/FlowCodeNode'
 import FlowDevice from './flow/FlowDevice'
 import './flow/flow-bar.css'
 
-export default function FlowBar(): React.JSX.Element {
+interface FlowBarProps {
+  promptTemplateProps: ConversationPromptSelectorProps
+}
+
+export default function FlowBar({ promptTemplateProps }: FlowBarProps): React.JSX.Element {
   const flowBarRef = useRef<HTMLElement>(null)
 
   useLayoutEffect(() => {
@@ -71,7 +78,7 @@ export default function FlowBar(): React.JSX.Element {
     <nav
       ref={flowBarRef}
       aria-label="AIFlow workflow"
-      className="flow-bar relative z-10 col-span-full grid min-h-0 grid-cols-subgrid items-center gap-0 overflow-visible"
+      className="flow-bar relative z-10 col-span-full grid grid-cols-subgrid items-center gap-0 overflow-visible"
     >
       <FlowColumn className="flow-col-talk min-w-0 col-start-1">
         <div className="flow-column-track-row flow-conversation-row w-full">
@@ -82,6 +89,11 @@ export default function FlowBar(): React.JSX.Element {
       </FlowColumn>
 
       <FlowArrow variant="pink" bridge className="flow-arrow-chat-ai" />
+      <div className="flow-prompt-template-entry">
+        <div className="flow-prompt-template-control">
+          <ConversationPromptSelector {...promptTemplateProps} />
+        </div>
+      </div>
       <FlowArrow variant="blue" bridge className="flow-arrow-bridge-1" />
 
       <FlowColumn className="min-w-0 col-start-2">

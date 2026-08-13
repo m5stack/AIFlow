@@ -33,6 +33,7 @@ export function useAgentSession() {
     addConversation,
     deleteConversation,
     renameConversation,
+    setConversationPromptTemplate,
     generateConversationTitle,
     appendConversationMessages,
     setTurnDuration,
@@ -345,6 +346,11 @@ export function useAgentSession() {
       })
   }
 
+  const handlePromptTemplateChange = async (promptTemplateId?: string): Promise<void> => {
+    if (!activeProjectId || !selectedConvId) return
+    await setConversationPromptTemplate(activeProjectId, selectedConvId, promptTemplateId)
+  }
+
   const handleAddModel = async (payload: CreateUserModelConfigPayload): Promise<void> => {
     try {
       const model = await window.ipc.model.create(payload)
@@ -415,6 +421,11 @@ export function useAgentSession() {
     onInterrupt: handleInterrupt
   }
 
+  const promptTemplateProps = {
+    activeTemplateId: selectedConv?.activePromptTemplateId,
+    onActiveTemplateChange: handlePromptTemplateChange
+  }
+
   return {
     activeProjectId,
     conversations,
@@ -430,6 +441,7 @@ export function useAgentSession() {
     autoScrollActive,
     tabsScrollRef,
     chatInputProps,
+    promptTemplateProps,
     setSelectedConv,
     deleteConversation,
     renameConversation,

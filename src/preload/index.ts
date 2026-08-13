@@ -24,6 +24,9 @@ import type {
   ProjectFileContent,
   ProjectFileNode,
   ProjectItem,
+  PromptTemplate,
+  CreatePromptTemplatePayload,
+  UpdatePromptTemplatePayload,
   SerialPortInfo,
   SkillItem,
   McpServerItem,
@@ -89,6 +92,18 @@ const ipc: IpcAPI = {
       title: string
     ): Promise<ProjectConversation> {
       return ipcRenderer.invoke('project:renameConversation', projectId, convId, title)
+    },
+    setConversationPromptTemplate(
+      projectId: string,
+      convId: string,
+      promptTemplateId?: string
+    ): Promise<ProjectConversation> {
+      return ipcRenderer.invoke(
+        'project:setConversationPromptTemplate',
+        projectId,
+        convId,
+        promptTemplateId
+      )
     },
     appendConversationMessages(
       projectId: string,
@@ -213,6 +228,20 @@ const ipc: IpcAPI = {
     },
     test(payload: ModelConnectionTestPayload): Promise<ModelConnectionTestResult> {
       return ipcRenderer.invoke('model:test', payload)
+    }
+  },
+  promptTemplate: {
+    list(): Promise<PromptTemplate[]> {
+      return ipcRenderer.invoke('promptTemplate:list')
+    },
+    create(payload: CreatePromptTemplatePayload): Promise<PromptTemplate> {
+      return ipcRenderer.invoke('promptTemplate:create', payload)
+    },
+    update(payload: UpdatePromptTemplatePayload): Promise<PromptTemplate> {
+      return ipcRenderer.invoke('promptTemplate:update', payload)
+    },
+    delete(templateId: string): Promise<void> {
+      return ipcRenderer.invoke('promptTemplate:delete', templateId)
     }
   },
   serial: {

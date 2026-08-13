@@ -183,26 +183,25 @@ export default function ConversationInput({
         isFlowVariant
           ? undefined
           : {
-              borderTop: isEmptyVariant ? undefined : '1px solid var(--border)',
-              backgroundColor: 'var(--sidebar-bg)',
-              height
-            }
+            borderTop: isEmptyVariant ? undefined : '1px solid var(--border)',
+            backgroundColor: 'var(--sidebar-bg)',
+            height
+          }
       }
     >
       <div
-        className={`relative flex flex-col overflow-hidden ${isDraggingImage ? 'ring-2 ring-inset ring-accent' : ''} ${
-          isFlowVariant
-            ? 'h-full min-h-0'
-            : 'h-full rounded-lg focus-within:ring-1 focus-within:ring-accent'
-        }`}
+        className={`relative flex flex-col overflow-hidden ${isDraggingImage ? 'ring-2 ring-inset ring-accent' : ''} ${isFlowVariant
+          ? 'h-full min-h-0'
+          : 'h-full rounded-lg focus-within:ring-1 focus-within:ring-accent'
+          }`}
         style={
           isFlowVariant
             ? undefined
             : {
-                backgroundColor: 'var(--input-bg)',
-                border: '1px solid var(--input-border)',
-                transition: 'box-shadow 0.15s'
-              }
+              backgroundColor: 'var(--input-bg)',
+              border: '1px solid var(--input-border)',
+              transition: 'box-shadow 0.15s'
+            }
         }
         onDragEnter={handleDragEnter}
         onDragOver={(event) => event.preventDefault()}
@@ -253,9 +252,8 @@ export default function ConversationInput({
         />
 
         <div
-          className={`flex items-center justify-between gap-2 px-2.5 py-1.5 ${
-            isFlowVariant ? 'h-9 text-[13px] text-muted' : ''
-          }`}
+          className={`flex items-center justify-between gap-2 px-2.5 py-1.5 ${isFlowVariant ? 'h-9 text-[13px] text-muted' : ''
+            }`}
         >
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <input

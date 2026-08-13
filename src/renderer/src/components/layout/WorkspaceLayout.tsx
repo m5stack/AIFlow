@@ -49,7 +49,12 @@ export default function WorkspaceLayout(): React.JSX.Element {
           <FilePanel />
         </div>
         <DataPanel />
-        <FlowBar />
+        <FlowBar
+          promptTemplateProps={{
+            ...session.promptTemplateProps,
+            disabled: session.chatInputProps.disabled
+          }}
+        />
         <ConversationThreadPanel session={session} />
         <CodePanel />
         <TerminalPanel />

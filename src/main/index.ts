@@ -6,6 +6,7 @@ import { registerClientIdIpc } from './ipc/clientIdIpc'
 import { registerModelIpc } from './ipc/modelIpc'
 import { registerFirmwareIpc } from './ipc/firmwareIpc'
 import { registerProjectIpc } from './ipc/projectIpc'
+import { registerPromptTemplateIpc } from './ipc/promptTemplateIpc'
 import { registerSerialIpc, registerSerialPortSelectedIpc } from './ipc/serialIpc'
 import { registerSkillIpc } from './ipc/skillIpc'
 import { registerTokenUsageIpc } from './ipc/tokenUsageIpc'
@@ -13,6 +14,7 @@ import { registerMcpIpc } from './ipc/mcpIpc'
 import { ClientIdService } from './services/clientIdService'
 import { McpService } from './services/mcpService'
 import { ProjectService } from './services/projectService'
+import { PromptTemplateService } from './services/promptTemplateService'
 import { SkillService } from './services/skillService'
 import { TokenUsageService } from './services/tokenUsageService'
 import { UserModelService } from './services/userModelService'
@@ -31,6 +33,7 @@ const BASE_DESIGN_HEIGHT = 900
 async function createWindow(
   projectService: ProjectService,
   userModelService: UserModelService,
+  promptTemplateService: PromptTemplateService,
   skillService: SkillService,
   mcpService: McpService,
   tokenUsageService: TokenUsageService
@@ -87,7 +90,14 @@ async function createWindow(
     return { action: 'deny' }
   })
 
-  registerAgentIpc(mainWindow, projectService, userModelService, mcpService, tokenUsageService)
+  registerAgentIpc(
+    mainWindow,
+    projectService,
+    userModelService,
+    promptTemplateService,
+    mcpService,
+    tokenUsageService
+  )
   registerSkillIpc(mainWindow, skillService, projectService)
 
   if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
@@ -124,22 +134,38 @@ app.whenReady().then(() => {
   const skillService = new SkillService()
   const projectService = new ProjectService(undefined, skillService)
   const userModelService = new UserModelService()
+  const promptTemplateService = new PromptTemplateService()
   const mcpService = new McpService()
   const clientIdService = new ClientIdService()
   const tokenUsageService = new TokenUsageService()
   registerProjectIpc(projectService)
   registerModelIpc(userModelService)
+  registerPromptTemplateIpc(promptTemplateService, projectService)
   registerMcpIpc(mcpService)
   registerClientIdIpc(clientIdService)
   registerTokenUsageIpc(tokenUsageService)
   registerFirmwareIpc()
   registerSerialPortSelectedIpc()
 
-  createWindow(projectService, userModelService, skillService, mcpService, tokenUsageService)
+  createWindow(
+    projectService,
+    userModelService,
+    promptTemplateService,
+    skillService,
+    mcpService,
+    tokenUsageService
+  )
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow(projectService, userModelService, skillService, mcpService, tokenUsageService)
+      createWindow(
+        projectService,
+        userModelService,
+        promptTemplateService,
+        skillService,
+        mcpService,
+        tokenUsageService
+      )
     }
   })
 })

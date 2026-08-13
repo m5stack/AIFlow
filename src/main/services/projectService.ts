@@ -213,6 +213,8 @@ const isValidManifest = (value: unknown): value is ProjectManifest => {
     typeof manifest.id === 'string' &&
     typeof manifest.projectName === 'string' &&
     typeof manifest.rootPath === 'string' &&
+    (manifest.lastSelectedPromptTemplateId === undefined ||
+      typeof manifest.lastSelectedPromptTemplateId === 'string') &&
     typeof manifest.language === 'string' &&
     typeof manifest.createdAt === 'string' &&
     typeof manifest.updatedAt === 'string'
@@ -559,10 +561,16 @@ export class ProjectService {
   }
 
   async addConversation(projectId: string): Promise<ProjectConversation> {
-    const conversations = await this.readConversations(projectId)
+    const [conversations, manifest] = await Promise.all([
+      this.readConversations(projectId),
+      this.readManifest(projectId)
+    ])
     const conversation: ProjectConversation = {
       id: normalizeConversationId(),
       title: uniqueConversationTitle(NEW_CHAT_TITLE, conversations),
+      ...(manifest.lastSelectedPromptTemplateId
+        ? { activePromptTemplateId: manifest.lastSelectedPromptTemplateId }
+        : {}),
       updatedAt: nowIso(),
       messages: []
     }
@@ -592,6 +600,27 @@ export class ProjectService {
       conversation.title = safeTitle
       return true
     })
+  }
+
+  async setConversationPromptTemplate(
+    projectId: string,
+    convId: string,
+    promptTemplateId?: string
+  ): Promise<ProjectConversation> {
+    const normalizedId = promptTemplateId?.trim() || undefined
+    const conversation = await this.mutateConversation(projectId, convId, (conversation) => {
+      if (conversation.activePromptTemplateId === normalizedId) return false
+      if (normalizedId) conversation.activePromptTemplateId = normalizedId
+      else delete conversation.activePromptTemplateId
+      return true
+    })
+    if (normalizedId) {
+      await this.updateManifest(projectId, (manifest) => {
+        manifest.lastSelectedPromptTemplateId = normalizedId
+        manifest.updatedAt = nowIso()
+      })
+    }
+    return conversation
   }
 
   async applyGeneratedConversationTitle(
@@ -806,6 +835,30 @@ export class ProjectService {
     )
   }
 
+  async clearPromptTemplateReferences(templateId: string): Promise<void> {
+    const projectIds = await this.getProjectIds()
+    await Promise.all(
+      projectIds.map(async (projectId) => {
+        const conversations = await this.readConversations(projectId)
+        await Promise.all(
+          conversations.map(async (conversation) => {
+            if (conversation.activePromptTemplateId !== templateId) return
+            await this.mutateConversation(projectId, conversation.id, (latestConversation) => {
+              if (latestConversation.activePromptTemplateId !== templateId) return false
+              delete latestConversation.activePromptTemplateId
+              return true
+            })
+          })
+        )
+        await this.updateManifest(projectId, (manifest) => {
+          if (manifest.lastSelectedPromptTemplateId !== templateId) return
+          delete manifest.lastSelectedPromptTemplateId
+          manifest.updatedAt = nowIso()
+        })
+      })
+    )
+  }
+
   async applySkillsChange(): Promise<void> {
     const projectIds = await this.getProjectIds()
     await Promise.all(projectIds.map((projectId) => this.reconcileProjectSkills(projectId)))
@@ -941,6 +994,8 @@ export class ProjectService {
       id: normalizeConversationId(raw.id),
       title: typeof raw.title === 'string' && raw.title.trim() ? raw.title : `${projectName} Chat`,
       claudeSessionId: typeof raw.claudeSessionId === 'string' ? raw.claudeSessionId : undefined,
+      activePromptTemplateId:
+        typeof raw.activePromptTemplateId === 'string' ? raw.activePromptTemplateId : undefined,
       updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : nowIso(),
       messages: Array.isArray(raw.messages) ? raw.messages : []
     }
@@ -1035,6 +1090,11 @@ export class ProjectService {
       activeDeviceId:
         typeof partial.activeDeviceId === 'string' && partial.activeDeviceId
           ? partial.activeDeviceId
+          : undefined,
+      lastSelectedPromptTemplateId:
+        typeof partial.lastSelectedPromptTemplateId === 'string' &&
+        partial.lastSelectedPromptTemplateId.trim()
+          ? partial.lastSelectedPromptTemplateId
           : undefined,
       language: typeof partial.language === 'string' ? partial.language : DEFAULT_LANGUAGE,
       activeFilePath:

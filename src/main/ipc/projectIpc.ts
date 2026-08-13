@@ -25,6 +25,7 @@ export function registerProjectIpc(projectService: ProjectService): void {
     'project:addConversation',
     'project:deleteConversation',
     'project:renameConversation',
+    'project:setConversationPromptTemplate',
     'project:appendConversationMessages',
     'project:setTurnDuration',
     'project:setTurnTokenUsage',
@@ -82,6 +83,11 @@ export function registerProjectIpc(projectService: ProjectService): void {
     'project:renameConversation',
     (_event, projectId: string, convId: string, title: string) =>
       projectService.renameConversation(projectId, convId, title)
+  )
+  ipcMain.handle(
+    'project:setConversationPromptTemplate',
+    (_event, projectId: string, convId: string, promptTemplateId?: string) =>
+      projectService.setConversationPromptTemplate(projectId, convId, promptTemplateId)
   )
   ipcMain.handle(
     'project:appendConversationMessages',

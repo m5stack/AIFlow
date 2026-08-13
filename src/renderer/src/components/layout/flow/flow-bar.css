@@ -753,10 +753,38 @@
 }
 
 /* Horizontal bridge bounds are measured from the rendered node edges in FlowBar. */
+.flow-bar {
+  min-height: 96px;
+}
+
 .flow-arrow-chat-ai {
   left: var(--flow-arrow-pink-left);
   width: var(--flow-arrow-pink-width);
   transform: translateY(-50%);
+}
+
+.flow-prompt-template-entry {
+  position: absolute;
+  top: calc(50% + 7px);
+  left: var(--flow-arrow-pink-left);
+  z-index: 20;
+  display: flex;
+  width: var(--flow-arrow-pink-width);
+  min-width: 0;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.flow-prompt-template-control {
+  display: flex;
+  width: min(190px, 100%);
+  min-width: 0;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.flow-prompt-template-control > :first-child {
+  max-width: 100%;
 }
 
 .flow-arrow-bridge-1 {

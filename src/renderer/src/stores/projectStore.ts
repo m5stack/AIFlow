@@ -237,6 +237,11 @@ interface ProjectStoreState {
   addConversation: (projectId: string) => Promise<void>
   deleteConversation: (projectId: string, convId: string) => Promise<void>
   renameConversation: (projectId: string, convId: string, title: string) => Promise<void>
+  setConversationPromptTemplate: (
+    projectId: string,
+    convId: string,
+    promptTemplateId?: string
+  ) => Promise<void>
   generateConversationTitle: (params: GenerateConversationTitleParams) => Promise<void>
   appendConversationMessages: (
     projectId: string,
@@ -603,6 +608,15 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     } catch (error) {
       toast.danger(`Rename failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
+  },
+
+  setConversationPromptTemplate: async (projectId, convId, promptTemplateId) => {
+    const conversation = await window.ipc.project.setConversationPromptTemplate(
+      projectId,
+      convId,
+      promptTemplateId
+    )
+    set((state) => ({ projects: conversationReplaced(state.projects, projectId, conversation) }))
   },
 
   generateConversationTitle: async (params) => {
