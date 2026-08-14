@@ -28,10 +28,12 @@ import imgNanoC6 from '../../assets/device/nanoc6.png'
 import imgNessoN1 from '../../assets/device/nesso_n1.png'
 import imgPaper from '../../assets/device/paper.png'
 import imgPaperColor from '../../assets/device/papercolor.png'
+import imgPaperMono from '../../assets/device/papermono.png'
 import imgPaperS3 from '../../assets/device/papers3.png'
 import imgPowerHub from '../../assets/device/powerhub.png'
 import imgSeeedXiaoEsp32S3 from '../../assets/device/seeedstudio-xiao-esp32s3.png'
 import imgStackChan from '../../assets/device/stackchan.png'
+import imgStampC5 from '../../assets/device/stamp-c5.png'
 import imgStampP4 from '../../assets/device/stamp-p4.png'
 import imgStampPico from '../../assets/device/stamp-pico.png'
 import imgStampS3Bat from '../../assets/device/stamp-s3bat.png'
@@ -78,6 +80,7 @@ const MODEL_IMAGE: Record<string, string> = {
   [DEVICE_TYPE.PAPER]: imgPaper,
   [DEVICE_TYPE.PAPERS3]: imgPaperS3,
   [DEVICE_TYPE.PAPER_COLOR]: imgPaperColor,
+  [DEVICE_TYPE.PAPER_MONO]: imgPaperMono,
   [DEVICE_TYPE.STICKC]: imgStickC,
   [DEVICE_TYPE.STAMP_PICO]: imgStampPico,
   [DEVICE_TYPE.ATOMU]: imgAtomU,
@@ -87,6 +90,7 @@ const MODEL_IMAGE: Record<string, string> = {
   [DEVICE_TYPE.STAMPLC]: imgStampLc,
   [DEVICE_TYPE.POWERHUB]: imgPowerHub,
   [DEVICE_TYPE.DUALKEY]: imgDualkey,
+  [DEVICE_TYPE.CHAIN_DUALKEY]: imgDualkey,
   [DEVICE_TYPE.STOPWATCH]: imgStopwatch,
   [DEVICE_TYPE.NANOC6]: imgNanoC6,
   [DEVICE_TYPE.TAB5]: imgTab5,
@@ -95,12 +99,22 @@ const MODEL_IMAGE: Record<string, string> = {
   [DEVICE_TYPE.STICKS3]: imgStickS3,
   [DEVICE_TYPE.UNIT_POE_P4]: imgUnitPoeP4,
   [DEVICE_TYPE.STAMP_P4]: imgStampP4,
+  [DEVICE_TYPE.STAMP_C5]: imgStampC5,
   [DEVICE_TYPE.SEEED_XIAO_ESP32S3]: imgSeeedXiaoEsp32S3,
   [DEVICE_TYPE.ESP32S3_BOX3]: imgEsp32S3Box3,
   [DEVICE_TYPE.NESSO_N1]: imgNessoN1
 }
 
 export function resolveDeviceImage(model: string): string {
-  const normalized = normalizeDeviceTypeForPinMap(model ?? '')
+  const normalizedInput = (model ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-')
+  const normalized =
+    normalizedInput === 'esp32-s3-box3' || normalizedInput === 'esp32s3-box3'
+      ? DEVICE_TYPE.ESP32S3_BOX3
+      : normalizedInput === 'xiao-s3' || normalizedInput === 'seeed-xiao-esp32s3'
+        ? DEVICE_TYPE.SEEED_XIAO_ESP32S3
+        : normalizeDeviceTypeForPinMap(model ?? '')
   return MODEL_IMAGE[normalized] ?? imgUnknown
 }

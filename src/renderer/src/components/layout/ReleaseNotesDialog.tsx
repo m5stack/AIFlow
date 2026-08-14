@@ -32,11 +32,11 @@ export default function ReleaseNotesDialog(): React.JSX.Element {
     <Modal>
       <Modal.Trigger<'button'>
         render={(props) => <button {...props} type="button" />}
-        className="cursor-pointer rounded-full bg-accent-bg px-2 py-0.5 font-semibold leading-none text-accent outline-none transition-colors hover:text-ink hover:ring-1 hover:ring-accent focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+        className="inline-flex h-5 cursor-pointer items-center justify-center rounded-full bg-accent-bg px-2 font-semibold text-accent outline-none transition-colors hover:text-ink hover:ring-1 hover:ring-accent focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
         aria-label={`View release notes for version ${APP_DISPLAY_VERSION}`}
         title="View release notes"
       >
-        <span className="text-[10px] leading-none">v{APP_DISPLAY_VERSION}</span>
+        <span className="text-[10px] leading-normal">v{APP_DISPLAY_VERSION}</span>
       </Modal.Trigger>
 
       <ModalBackdrop

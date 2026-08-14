@@ -123,7 +123,6 @@ export interface PromptTemplateAPI {
 
 export interface FirmwareAPI {
   generateNvsFromCsv(csvText: string, size: number | string): Promise<Uint8Array>
-  readBundled(fileName: string): Promise<Uint8Array>
 }
 
 export interface ClientIdAPI {

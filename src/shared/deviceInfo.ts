@@ -26,6 +26,7 @@ export const DEVICE_TYPE = {
   PAPER: 'paper',
   PAPERS3: 'papers3',
   PAPER_COLOR: 'papercolor',
+  PAPER_MONO: 'papermono',
   STICKC: 'stickc',
   STAMP_PICO: 'stamppico',
   ATOMU: 'atomu',
@@ -35,6 +36,7 @@ export const DEVICE_TYPE = {
   STAMPLC: 'stamplc',
   POWERHUB: 'powerhub',
   DUALKEY: 'dualkey',
+  CHAIN_DUALKEY: 'chain-dualkey',
   STOPWATCH: 'stopwatch',
 
   NANOC6: 'nanoc6',
@@ -44,6 +46,7 @@ export const DEVICE_TYPE = {
   STICKS3: 'sticks3',
   UNIT_POE_P4: 'unit-poep4',
   STAMP_P4: 'stampp4',
+  STAMP_C5: 'stamp-c5',
 
   /* Third party */
   SEEED_XIAO_ESP32S3: 'seeed-xiao-esp32s3',
@@ -51,7 +54,7 @@ export const DEVICE_TYPE = {
   NESSO_N1: 'arduino-nesso-n1'
 }
 
-export const getPinMap = (deviceType: string) => {
+export const getPinMap = (deviceType: string): Record<string, string> => {
   let pinMap = {}
   switch (deviceType) {
     case DEVICE_TYPE.ATOMS3:
@@ -63,6 +66,7 @@ export const getPinMap = (deviceType: string) => {
     case DEVICE_TYPE.CARDPUTER:
     case DEVICE_TYPE.CARDPUTER_ADV:
     case DEVICE_TYPE.NANOC6:
+    case DEVICE_TYPE.STAMP_C5:
       pinMap = {
         portA: 'SCL:1,SDA:2'
       }
@@ -182,6 +186,10 @@ export const getPinMap = (deviceType: string) => {
         port2: 'SCL:5,SDA:6'
       }
       break
+    case DEVICE_TYPE.CHAIN_DUALKEY:
+    case DEVICE_TYPE.PAPER_MONO:
+      pinMap = {}
+      break
     case DEVICE_TYPE.STICKS3:
       pinMap = {
         portA: 'SCL:10,SDA:9'
@@ -197,18 +205,23 @@ export const getPinMap = (deviceType: string) => {
         portA: 'SCL:26,SDA:27'
       }
       break
-    default:
-      /** Core/fire */
+    case DEVICE_TYPE.CORE:
+    case DEVICE_TYPE.FIRE:
       pinMap = {
         portA: 'SCL:22,SDA:21',
         portB: 'SCL:36,SDA:26',
         portC: 'SCL:16,SDA:17'
       }
+      break
+    default:
+      pinMap = {
+        Port: ''
+      }
   }
   return pinMap
 }
 
-export const getHatPinMap = (type: string) => {
+export const getHatPinMap = (type: string): Record<string, string> => {
   switch (type) {
     case DEVICE_TYPE.STICKC:
     case DEVICE_TYPE.STICKC_PLUS:
@@ -227,7 +240,7 @@ export const getHatPinMap = (type: string) => {
   }
 }
 
-export const getBasePinMap = (deviceType: string) => {
+export const getBasePinMap = (deviceType: string): Record<string, string> => {
   let pinMap = {}
   switch (deviceType) {
     case DEVICE_TYPE.ATOM_ECHO:
@@ -285,6 +298,8 @@ export const getScreenSize = (deviceType: string): DeviceScreenSize => {
       return { width: 960, height: 540 }
     case DEVICE_TYPE.PAPER_COLOR:
       return { width: 400, height: 600 }
+    case DEVICE_TYPE.PAPER_MONO:
+      return { width: 480, height: 800 }
     case DEVICE_TYPE.STOPWATCH:
       return { width: 468, height: 468 }
     case DEVICE_TYPE.TAB5:
@@ -313,8 +328,10 @@ export const getScreenSize = (deviceType: string): DeviceScreenSize => {
     case DEVICE_TYPE.CAPSULE:
     case DEVICE_TYPE.POWERHUB:
     case DEVICE_TYPE.DUALKEY:
+    case DEVICE_TYPE.CHAIN_DUALKEY:
     case DEVICE_TYPE.NANOC6:
     case DEVICE_TYPE.UNIT_POE_P4:
+    case DEVICE_TYPE.STAMP_C5:
     case DEVICE_TYPE.SEEED_XIAO_ESP32S3:
       return { width: 0, height: 0 }
     case DEVICE_TYPE.ESP32S3_BOX3:

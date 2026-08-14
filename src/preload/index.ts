@@ -261,9 +261,6 @@ const ipc: IpcAPI = {
   firmware: {
     generateNvsFromCsv(csvText: string, size: number | string): Promise<Uint8Array> {
       return ipcRenderer.invoke('firmware:generateNvsFromCsv', csvText, size)
-    },
-    readBundled(fileName: string): Promise<Uint8Array> {
-      return ipcRenderer.invoke('firmware:readBundled', fileName)
     }
   },
   clientId: {

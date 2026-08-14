@@ -216,14 +216,15 @@ export default function FlowDevice(): React.JSX.Element {
     <>
       <div className="flow-device-wrap">
         <div
-          className={`flow-device${showGlow && deviceGlow === 'running'
-            ? ' flow-device-running'
-            : showGlow && deviceGlow === 'success'
-              ? ' flow-device-success'
-              : showGlow && deviceGlow === 'failed'
-                ? ' flow-device-failed'
-                : ''
-            }`}
+          className={`flow-device${
+            showGlow && deviceGlow === 'running'
+              ? ' flow-device-running'
+              : showGlow && deviceGlow === 'success'
+                ? ' flow-device-success'
+                : showGlow && deviceGlow === 'failed'
+                  ? ' flow-device-failed'
+                  : ''
+          }`}
         >
           <div className="flow-device-left">
             <span className="flow-device-title">Device</span>
@@ -425,7 +426,11 @@ export default function FlowDevice(): React.JSX.Element {
           if (!activeProjectId) setPreviewDeviceId(deviceId)
         }}
       />
-      <FirmwareFlashDialog isOpen={showFlashDialog} onClose={() => setShowFlashDialog(false)} />
+      <FirmwareFlashDialog
+        isOpen={showFlashDialog}
+        onClose={() => setShowFlashDialog(false)}
+        currentDeviceType={displayDevice?.type}
+      />
     </>
   )
 }

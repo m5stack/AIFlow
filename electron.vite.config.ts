@@ -6,8 +6,9 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 const nvsPartitionGenSrc = resolve('src/shared/vendor/nvs_partition_gen.js')
-const appVersion = (JSON.parse(readFileSync(resolve('package.json'), 'utf-8')) as { version: string })
-  .version
+const appVersion = (
+  JSON.parse(readFileSync(resolve('package.json'), 'utf-8')) as { version: string }
+).version
 
 /** Copy NVS generator beside main bundle so main process can require() it at runtime. */
 function copyNvsPartitionGenPlugin(): Plugin {
@@ -40,6 +41,11 @@ export default defineConfig({
           target: 'https://uiflow2.m5stack.com/m5stack/api/v1',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, '')
+        },
+        '/burner': {
+          target: 'https://burner.m5stack.com/api/v1',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/burner/, '')
         },
         '/ws/realtime': {
           target: 'wss://uiflow2.m5stack.com',

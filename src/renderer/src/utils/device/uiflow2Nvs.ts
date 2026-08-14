@@ -12,7 +12,6 @@ export const UIFLOW2_NVS_OFFSET = 0x9000
  */
 /** Default UIFlow2 backend host written to NVS `server` key during firmware flash. */
 export const UIFLOW2_DEFAULT_SERVER = import.meta.env.VITE_DEFAULT_SERVER
-export const UIFLOW2_OFFICIAL_SERVER = 'uiflow2.m5stack.com'
 
 export const UIFLOW2_NVS_DEFAULTS = {
   server: UIFLOW2_DEFAULT_SERVER,
@@ -132,7 +131,7 @@ export function mixinNvsIntoFirmware(firmware: Uint8Array, nvsBin: Uint8Array): 
   if (firmware.byteLength < minSize) {
     throw new Error(
       `Firmware image is too small (${firmware.byteLength} bytes). ` +
-      `Expected at least ${minSize} bytes for UIFlow2 NVS slot at 0x${UIFLOW2_NVS_OFFSET.toString(16)}.`
+        `Expected at least ${minSize} bytes for UIFlow2 NVS slot at 0x${UIFLOW2_NVS_OFFSET.toString(16)}.`
     )
   }
   if (nvsBin.byteLength !== UIFLOW2_NVS_PARTITION_SIZE) {
