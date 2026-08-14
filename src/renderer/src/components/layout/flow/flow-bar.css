@@ -753,10 +753,6 @@
 }
 
 /* Horizontal bridge bounds are measured from the rendered node edges in FlowBar. */
-.flow-bar {
-  min-height: 96px;
-}
-
 .flow-arrow-chat-ai {
   left: var(--flow-arrow-pink-left);
   width: var(--flow-arrow-pink-width);

@@ -78,7 +78,7 @@ export default function FlowBar({ promptTemplateProps }: FlowBarProps): React.JS
     <nav
       ref={flowBarRef}
       aria-label="AIFlow workflow"
-      className="flow-bar relative z-10 col-span-full grid grid-cols-subgrid items-center gap-0 overflow-visible"
+      className="flow-bar relative z-10 col-span-full grid min-h-0 grid-cols-subgrid items-center gap-0 overflow-visible"
     >
       <FlowColumn className="flow-col-talk min-w-0 col-start-1">
         <div className="flow-column-track-row flow-conversation-row w-full">

@@ -89,7 +89,7 @@ async function createWindow(
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
-  mainWindow.webContents.openDevTools()
+
   registerAgentIpc(
     mainWindow,
     projectService,
