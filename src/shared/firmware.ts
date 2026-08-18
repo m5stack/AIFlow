@@ -17,6 +17,7 @@ export interface RemoteFirmwareApiItem {
 }
 
 const THIRD_PARTY_DEVICE_PATTERN = /\bFor\s+([^\]]+)\s*$/i
+const CORE_MEMORY_DEVICE_PATTERN = /\bcore[-_\s]?(4m|16m)\b/i
 const FILTERED_COMPOSITE_DEVICE = 'core2tough'
 const FIRMWARE_COLLATOR = new Intl.Collator('en', {
   numeric: true,
@@ -97,11 +98,11 @@ function normalizeFirmwareDeviceAlias(input: string): string {
 }
 
 function resolveFirmwareDeviceType(input: string): string | null {
-  const normalized = normalizeFirmwareDeviceAlias(input)
+  const normalized = normalizeDeviceTypeForPinMap(normalizeFirmwareDeviceAlias(input))
   if (!normalized) return null
   if (normalized === 'stamp' || normalized === 'stamp-series') return DEVICE_TYPE.STAMP_PICO
+  if (/^core-?(?:4m|16m)$/.test(normalized)) return DEVICE_TYPE.CORE
   if (normalized === 'core') return DEVICE_TYPE.CORE
-  if (normalized === 'atomlite') return DEVICE_TYPE.ATOM_LITE
   if (normalized === 'stampplc') return DEVICE_TYPE.STAMPLC
   if (normalized === 'nesson1') return DEVICE_TYPE.NESSO_N1
   if (normalized === 'seeedstudioxiaoesp32s3') return DEVICE_TYPE.SEEED_XIAO_ESP32S3
@@ -127,6 +128,14 @@ function firmwareNameDeviceType(name: string): string | null {
     nameLabel.replace(/^chain\s+/i, '')
   ]
   return candidates.map(resolveFirmwareDeviceType).find(Boolean) ?? null
+}
+
+function coreMemoryDeviceLabel(...values: string[]): string | null {
+  for (const value of values) {
+    const memorySize = value.match(CORE_MEMORY_DEVICE_PATTERN)?.[1]
+    if (memorySize) return `Core-${memorySize.toUpperCase()}`
+  }
+  return null
 }
 
 export function normalizeFirmwareDeviceType(input: string): string {
@@ -199,10 +208,11 @@ export function parseRemoteFirmwareItem(
   if (deviceType === DEVICE_TYPE.CORE2 && version.replace(/^v/i, '') === '2.3.2') {
     return null
   }
-  const deviceLabel = getFirmwareDeviceLabel(
-    deviceType,
-    firmwareNameDevice || apiDeviceType || suffixDeviceType
-  )
+  const deviceLabel =
+    (deviceType === DEVICE_TYPE.CORE
+      ? coreMemoryDeviceLabel(firmwareName, suffixDeviceType, apiDeviceType)
+      : null) ||
+    getFirmwareDeviceLabel(deviceType, firmwareNameDevice || apiDeviceType || suffixDeviceType)
   if (isFilteredCompositeDevice(deviceLabel)) return null
   const id = `remote:${index}:${rawVersion}:${deviceType}`
 

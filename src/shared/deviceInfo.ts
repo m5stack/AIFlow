@@ -351,6 +351,7 @@ export function normalizeDeviceTypeForPinMap(input: string): string {
   const all = Object.values(DEVICE_TYPE) as string[]
   if (all.includes(s)) return s
   const compact = s.replace(/-/g, '')
+  if (compact === 'atomlite') return DEVICE_TYPE.ATOM_LITE
   for (const v of all) {
     if (v.replace(/-/g, '') === compact) return v
   }
