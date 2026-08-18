@@ -1,6 +1,7 @@
-import React, { useRef, useEffect, useCallback } from 'react'
+import React, { useRef, useEffect, useCallback, useState } from 'react'
 import { Button, Tooltip } from '@heroui/react'
-import { ClearTerminalIcon } from '../icons/Icons'
+import { isTerminalSupportedDevice } from '../../../../shared/terminalSupport'
+import { ClearTerminalIcon, QuestionCircleIcon } from '../icons/Icons'
 import { useActiveProjectDevices } from '../../hooks/useActiveProjectDevices'
 import {
   useRealtimeTerminal,
@@ -10,6 +11,7 @@ import {
 import { MP_CTRL } from '../../utils/terminal/pasteFlow'
 import PanelShell from '../layout/PanelShell'
 import TerminalView, { type TerminalViewHandle } from './TerminalView'
+import TerminalSupportedDevicesDialog from './TerminalSupportedDevicesDialog'
 
 const STATUS_LABELS = {
   idle: 'Disconnected',
@@ -38,20 +40,25 @@ function TerminalStatusDot({ status }: { status: RealtimeTerminalStatus }): Reac
 export default function TerminalPanel(): React.JSX.Element {
   const { activeProjectId, selectedDevice } = useActiveProjectDevices()
   const selectedDeviceId = selectedDevice?.id ?? ''
-
-  const canConfigureConnection = !!activeProjectId && !!selectedDeviceId
-  const canAutoConnect = canConfigureConnection && !selectedDevice?.invalid
+  const hasValidSelectedDevice = !!selectedDeviceId && !selectedDevice?.invalid
+  const supportsTerminal =
+    hasValidSelectedDevice && isTerminalSupportedDevice(selectedDevice?.type ?? '')
+  const isUnsupportedDevice = hasValidSelectedDevice && !supportsTerminal
+  const terminalDeviceId = supportsTerminal ? selectedDeviceId : ''
+  const canConfigureConnection = !!activeProjectId && supportsTerminal
+  const canAutoConnect = canConfigureConnection
 
   const terminalRef = useRef<TerminalViewHandle>(null)
+  const [isSupportedDevicesOpen, setIsSupportedDevicesOpen] = useState(false)
 
   const { status, errorMessage, connect, disconnect, sendData, setTerminalDataHandler } =
-    useRealtimeTerminal(selectedDeviceId, {
+    useRealtimeTerminal(terminalDeviceId, {
       autoConnect: canAutoConnect
     })
 
   const isConnected = status === 'connected'
   const isConnecting = status === 'connecting'
-  const canConnect = !!selectedDeviceId && !selectedDevice?.invalid
+  const canConnect = supportsTerminal
 
   const handleConnect = useCallback(async (): Promise<void> => {
     if (!canConfigureConnection || isConnecting || !canConnect) return
@@ -75,7 +82,27 @@ export default function TerminalPanel(): React.JSX.Element {
     if (status === 'connected' && canAutoConnect) {
       terminalRef.current?.focus()
     }
-  }, [status, selectedDeviceId, canAutoConnect])
+  }, [status, terminalDeviceId, canAutoConnect])
+
+  const supportedDevicesButton = (
+    <Tooltip delay={300}>
+      <Tooltip.Trigger className="inline-flex">
+        <span className="inline-flex">
+          <button
+            type="button"
+            className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted outline-none transition-colors hover:bg-soft hover:text-ink focus-visible:ring-2 focus-visible:ring-accent"
+            onClick={() => setIsSupportedDevicesOpen(true)}
+            aria-label="View Terminal supported devices"
+          >
+            <QuestionCircleIcon size={12} />
+          </button>
+        </span>
+      </Tooltip.Trigger>
+      <Tooltip.Content placement="top" showArrow>
+        Supported devices
+      </Tooltip.Content>
+    </Tooltip>
+  )
 
   const clearTerminalButton = (
     <Button
@@ -86,6 +113,7 @@ export default function TerminalPanel(): React.JSX.Element {
         terminalRef.current?.clear()
         terminalRef.current?.focus()
       }}
+      isDisabled={isUnsupportedDevice}
       aria-label="Clear terminal"
     >
       <ClearTerminalIcon size={12} />
@@ -113,8 +141,11 @@ export default function TerminalPanel(): React.JSX.Element {
     </Tooltip>
   )
 
-  const connectionButtonTitle =
-    status === 'error' && errorMessage ? errorMessage : STATUS_LABELS[status]
+  const connectionButtonTitle = isUnsupportedDevice
+    ? 'Terminal is not supported for this device'
+    : status === 'error' && errorMessage
+      ? errorMessage
+      : STATUS_LABELS[status]
 
   const connectionButton = (
     <button
@@ -155,23 +186,55 @@ export default function TerminalPanel(): React.JSX.Element {
     </div>
   )
 
+  const titleActions = (
+    <div className="flex items-center gap-0.5">
+      {supportedDevicesButton}
+      {clearTerminalButton}
+    </div>
+  )
+
   return (
-    <PanelShell
-      title="Terminal"
-      icon={<span className="font-mono text-[14px]">›_</span>}
-      titleActions={clearTerminalButton}
-      actions={headerActions}
-      className="bg-terminal-bg"
-      bodyClassName="min-h-0 overflow-hidden p-0 font-mono text-[13px] leading-relaxed text-ink"
-    >
-      <div className="h-full min-h-0 p-3">
-        <TerminalView
-          ref={terminalRef as React.Ref<TerminalViewHandle>}
-          status={status}
-          onSendData={sendData}
-          onRegisterDataHandler={setTerminalDataHandler}
-        />
-      </div>
-    </PanelShell>
+    <>
+      <PanelShell
+        title="Terminal"
+        icon={<span className="font-mono text-[14px]">›_</span>}
+        titleActions={titleActions}
+        actions={headerActions}
+        className="bg-terminal-bg"
+        bodyClassName="min-h-0 overflow-hidden p-0 font-mono text-[13px] leading-relaxed text-ink"
+      >
+        {isUnsupportedDevice ? (
+          <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 px-5 text-center">
+            <QuestionCircleIcon size={22} className="text-muted" />
+            <div className="flex flex-col gap-1">
+              <p className="text-[13px] font-semibold text-ink">
+                Terminal is not supported for this device
+              </p>
+              <p className="text-[11px] text-muted">Choose a supported device to use Terminal.</p>
+            </div>
+            <Button
+              variant="ghost"
+              className="h-7 min-h-7 cursor-pointer px-2.5 text-[11px]"
+              onPress={() => setIsSupportedDevicesOpen(true)}
+            >
+              View supported devices
+            </Button>
+          </div>
+        ) : (
+          <div className="h-full min-h-0 p-3">
+            <TerminalView
+              ref={terminalRef as React.Ref<TerminalViewHandle>}
+              status={status}
+              onSendData={sendData}
+              onRegisterDataHandler={setTerminalDataHandler}
+            />
+          </div>
+        )}
+      </PanelShell>
+      <TerminalSupportedDevicesDialog
+        isOpen={isSupportedDevicesOpen}
+        onOpenChange={setIsSupportedDevicesOpen}
+      />
+    </>
   )
 }
