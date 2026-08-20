@@ -15,6 +15,25 @@ export interface AppReleaseNote {
 export const APP_RELEASE_NOTES: readonly AppReleaseNote[] = [
   {
     version: APP_DISPLAY_VERSION,
+    releasedAt: '2026-08-20',
+    sections: [
+      {
+        title: 'Features',
+        items: [
+          'Added image attachments to AI conversations.',
+          'Added custom prompt templates.',
+          'Added searchable online UIFlow2 firmware flashing.',
+          'Improved Terminal and WebSocket reliability.',
+          'Switched to the new backend service.',
+          'Added release notes history.',
+          'Updated Claude Agent SDK to v0.3.237',
+          'Fixed known bugs.'
+        ]
+      }
+    ]
+  },
+  {
+    version: '1.0.3-beta',
     releasedAt: '2026-07-24',
     sections: [
       {
