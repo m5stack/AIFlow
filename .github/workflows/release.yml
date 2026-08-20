@@ -28,6 +28,12 @@ jobs:
             artifact-name: macos-arm64
             artifact-paths: |
               dist/*.dmg
+          - name: macOS x64
+            os: macos-latest
+            build-script: build:mac:x64
+            artifact-name: macos-x64
+            artifact-paths: |
+              dist/*-x64.dmg
           - name: Windows x64
             os: windows-latest
             build-script: build:win
