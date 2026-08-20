@@ -8,8 +8,10 @@ import PanelShell from '../layout/PanelShell'
 import ConversationTabs from './ConversationTabs'
 import ConversationTurnMeta from './ConversationTurnMeta'
 import SessionTokenBadge from './SessionTokenBadge'
+import ConversationImagePreviewDialog from './ConversationImagePreviewDialog'
 import { useChatAutoScroll } from '../../hooks/useChatAutoScroll'
 import type { AgentSession } from '../../hooks/useAgentSession'
+import type { ChatImageAttachment } from '../../types/chat'
 
 interface ConversationThreadPanelProps {
   session: AgentSession
@@ -18,6 +20,7 @@ interface ConversationThreadPanelProps {
 export default function ConversationThreadPanel({
   session
 }: ConversationThreadPanelProps): React.JSX.Element {
+  const [previewImage, setPreviewImage] = React.useState<ChatImageAttachment | null>(null)
   const {
     activeProjectId,
     conversations,
@@ -52,6 +55,7 @@ export default function ConversationThreadPanel({
       actions={<SessionTokenBadge />}
       bodyClassName="flex flex-col gap-3 overflow-hidden"
     >
+      <ConversationImagePreviewDialog image={previewImage} onClose={() => setPreviewImage(null)} />
       <div className="conversation-tabs-bar">
         <ConversationTabs
           conversations={conversations}
@@ -98,7 +102,7 @@ export default function ConversationThreadPanel({
                 <React.Fragment key={turn.id}>
                   {turn.user && (
                     <div className="conv-message-user select-text">
-                      <ConversationMessage message={turn.user} />
+                      <ConversationMessage message={turn.user} onPreviewImage={setPreviewImage} />
                     </div>
                   )}
                   {turn.assistantParts.length > 0 &&
@@ -107,7 +111,10 @@ export default function ConversationThreadPanel({
                       return (
                         <div className="conv-turn-group">
                           <div className="conv-message-assistant select-text">
-                            <ConversationMessage message={assistantMessage} />
+                            <ConversationMessage
+                              message={assistantMessage}
+                              onPreviewImage={setPreviewImage}
+                            />
                           </div>
                           <ConversationTurnMeta message={assistantMessage} />
                         </div>

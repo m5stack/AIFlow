@@ -58,7 +58,7 @@
 
 .conv-message-images {
   display: grid;
-  width: min(320px, 68vw);
+  width: min(272px, 100%);
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.375rem;
   margin-bottom: 0.5rem;
@@ -70,6 +70,7 @@
 }
 
 .conv-message-images-single {
+  width: min(220px, 100%);
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -78,18 +79,42 @@
   margin: 0;
 }
 
-.conv-message-image img {
+.conv-message-image-button {
   display: block;
   width: 100%;
-  height: 112px;
+  height: 104px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
   border-radius: 6px;
-  object-fit: cover;
   background: var(--soft);
+  cursor: zoom-in;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
-.conv-message-images-single img {
-  height: auto;
-  max-height: 260px;
+.conv-message-image-button:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.conv-message-image-button:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.conv-message-image-button img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.conv-message-images-single .conv-message-image-button {
+  height: 160px;
+}
+
+.conv-message-images-single .conv-message-image-button img {
   object-fit: contain;
 }
 

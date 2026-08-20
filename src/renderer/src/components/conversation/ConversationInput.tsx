@@ -18,6 +18,10 @@ interface ConversationInputProps {
   selectedModel?: string
   onNeedModel?: () => void
   onInterrupt?: () => void
+  value: string
+  images: ChatImageAttachment[]
+  onValueChange: (value: string) => void
+  onImagesChange: (images: ChatImageAttachment[]) => void
 }
 
 export default function ConversationInput({
@@ -31,9 +35,12 @@ export default function ConversationInput({
   models = [],
   selectedModel = '',
   onNeedModel,
-  onInterrupt
+  onInterrupt,
+  value,
+  images,
+  onValueChange,
+  onImagesChange
 }: ConversationInputProps): React.JSX.Element {
-  const [value, setValue] = useState('')
   const [isDraggingImage, setIsDraggingImage] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -41,8 +48,8 @@ export default function ConversationInput({
   const setTalk = useFlowStatusStore((s) => s.setTalk)
   const selectedModelConfig = models.find((model) => model.id === selectedModel)
   const hasSelectedModel = Boolean(selectedModel && selectedModelConfig)
-  const { images, imageError, isReadingImages, addImageFiles, removeImage, clearImages } =
-    useChatImageAttachments(disabled || isThinking)
+  const { imageError, isReadingImages, addImageFiles, removeImage, clearImages } =
+    useChatImageAttachments(disabled || isThinking, images, onImagesChange)
 
   const syncTalkGlow = useCallback(
     (nextValue: string) => {
@@ -91,7 +98,7 @@ export default function ConversationInput({
       return
     }
     onSend(trimmed, images)
-    setValue('')
+    onValueChange('')
     clearImages()
     setTalk(false)
   }
@@ -183,25 +190,26 @@ export default function ConversationInput({
         isFlowVariant
           ? undefined
           : {
-            borderTop: isEmptyVariant ? undefined : '1px solid var(--border)',
-            backgroundColor: 'var(--sidebar-bg)',
-            height
-          }
+              borderTop: isEmptyVariant ? undefined : '1px solid var(--border)',
+              backgroundColor: 'var(--sidebar-bg)',
+              height
+            }
       }
     >
       <div
-        className={`relative flex flex-col overflow-hidden ${isDraggingImage ? 'ring-2 ring-inset ring-accent' : ''} ${isFlowVariant
-          ? 'h-full min-h-0'
-          : 'h-full rounded-lg focus-within:ring-1 focus-within:ring-accent'
-          }`}
+        className={`relative flex flex-col overflow-hidden ${isDraggingImage ? 'ring-2 ring-inset ring-accent' : ''} ${
+          isFlowVariant
+            ? 'h-full min-h-0'
+            : 'h-full rounded-lg focus-within:ring-1 focus-within:ring-accent'
+        }`}
         style={
           isFlowVariant
             ? undefined
             : {
-              backgroundColor: 'var(--input-bg)',
-              border: '1px solid var(--input-border)',
-              transition: 'box-shadow 0.15s'
-            }
+                backgroundColor: 'var(--input-bg)',
+                border: '1px solid var(--input-border)',
+                transition: 'box-shadow 0.15s'
+              }
         }
         onDragEnter={handleDragEnter}
         onDragOver={(event) => event.preventDefault()}
@@ -239,7 +247,7 @@ export default function ConversationInput({
           value={value}
           onChange={(e) => {
             const nextValue = e.target.value
-            setValue(nextValue)
+            onValueChange(nextValue)
             syncTalkGlow(nextValue)
           }}
           onFocus={handleFocus}
@@ -252,8 +260,9 @@ export default function ConversationInput({
         />
 
         <div
-          className={`flex items-center justify-between gap-2 px-2.5 py-1.5 ${isFlowVariant ? 'h-9 text-[13px] text-muted' : ''
-            }`}
+          className={`flex items-center justify-between gap-2 px-2.5 py-1.5 ${
+            isFlowVariant ? 'h-9 text-[13px] text-muted' : ''
+          }`}
         >
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <input

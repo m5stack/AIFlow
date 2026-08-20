@@ -26,15 +26,17 @@ const readImage = (file: File): Promise<ChatImageAttachment> =>
     reader.readAsDataURL(file)
   })
 
-export function useChatImageAttachments(disabled: boolean): {
-  images: ChatImageAttachment[]
+export function useChatImageAttachments(
+  disabled: boolean,
+  images: ChatImageAttachment[],
+  onImagesChange: (images: ChatImageAttachment[]) => void
+): {
   imageError: string
   isReadingImages: boolean
   addImageFiles: (files: File[]) => Promise<boolean>
   removeImage: (imageId: string) => void
   clearImages: () => void
 } {
-  const [images, setImages] = useState<ChatImageAttachment[]>([])
   const [imageError, setImageError] = useState('')
   const [isReadingImages, setIsReadingImages] = useState(false)
   const isReadingRef = useRef(false)
@@ -68,7 +70,7 @@ export function useChatImageAttachments(disabled: boolean): {
       setIsReadingImages(true)
       try {
         const nextImages = await Promise.all(candidates.map(readImage))
-        setImages((current) => [...current, ...nextImages].slice(0, CHAT_IMAGE_MAX_COUNT))
+        onImagesChange([...images, ...nextImages].slice(0, CHAT_IMAGE_MAX_COUNT))
         return true
       } catch (error) {
         setImageError(error instanceof Error ? error.message : 'Could not read the image.')
@@ -78,18 +80,21 @@ export function useChatImageAttachments(disabled: boolean): {
         setIsReadingImages(false)
       }
     },
-    [disabled, images.length]
+    [disabled, images, onImagesChange]
   )
 
-  const removeImage = useCallback((imageId: string): void => {
-    setImages((current) => current.filter((image) => image.id !== imageId))
-    setImageError('')
-  }, [])
+  const removeImage = useCallback(
+    (imageId: string): void => {
+      onImagesChange(images.filter((image) => image.id !== imageId))
+      setImageError('')
+    },
+    [images, onImagesChange]
+  )
 
   const clearImages = useCallback((): void => {
-    setImages([])
+    onImagesChange([])
     setImageError('')
-  }, [])
+  }, [onImagesChange])
 
-  return { images, imageError, isReadingImages, addImageFiles, removeImage, clearImages }
+  return { imageError, isReadingImages, addImageFiles, removeImage, clearImages }
 }

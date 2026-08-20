@@ -1,7 +1,11 @@
 import React from 'react'
 import { CheckIcon, ChevronDownIcon, CloseIcon } from '../icons/Icons'
 import ConversationMarkdown from './ConversationMarkdown'
-import type { ChatMessage as ChatMessageType, ChatCodeBlock } from '../../types/chat'
+import type {
+  ChatMessage as ChatMessageType,
+  ChatCodeBlock,
+  ChatImageAttachment
+} from '../../types/chat'
 import type { ChatMessageRunStatus } from '../../types/project'
 import { isChatImageMediaType } from '../../../../shared/chatImages'
 
@@ -9,9 +13,14 @@ export type { ChatMessage } from '../../types/chat'
 
 interface ConversationMessageProps {
   message: ChatMessageType
+  onPreviewImage: (image: ChatImageAttachment) => void
 }
 
-function MessageBody({ message }: { message: ChatMessageType }): React.JSX.Element {
+function imageDataUrl(image: ChatImageAttachment): string {
+  return `data:${image.mediaType};base64,${image.data}`
+}
+
+function MessageBody({ message, onPreviewImage }: ConversationMessageProps): React.JSX.Element {
   const isUser = message.role === 'user'
   const images = (message.images ?? []).filter(
     (image) => isChatImageMediaType(image.mediaType) && Boolean(image.data)
@@ -28,11 +37,15 @@ function MessageBody({ message }: { message: ChatMessageType }): React.JSX.Eleme
         >
           {images.map((image) => (
             <figure key={image.id} className="conv-message-image">
-              <img
-                src={`data:${image.mediaType};base64,${image.data}`}
-                alt={image.name}
-                loading="lazy"
-              />
+              <button
+                type="button"
+                className="conv-message-image-button"
+                onClick={() => onPreviewImage(image)}
+                aria-label={`Preview image ${image.name}`}
+                title={`Preview ${image.name}`}
+              >
+                <img src={imageDataUrl(image)} alt="" loading="lazy" />
+              </button>
               <figcaption title={image.name}>{image.name}</figcaption>
             </figure>
           ))}
@@ -124,6 +137,8 @@ function ReasoningBlock({
   const bodyRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
+    // Streaming starts asynchronously and should reopen reasoning hidden by the user.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (isStreaming) setCollapsed(false)
   }, [isStreaming])
 
@@ -142,9 +157,7 @@ function ReasoningBlock({
         onClick={() => setCollapsed((value) => !value)}
         aria-expanded={!collapsed}
       >
-        <span className="conv-reasoning-label">
-          {isStreaming ? 'Reasoning…' : 'Reasoning'}
-        </span>
+        <span className="conv-reasoning-label">{isStreaming ? 'Reasoning…' : 'Reasoning'}</span>
         <ChevronDownIcon
           size={12}
           className={`conv-reasoning-chevron ${collapsed ? '' : 'conv-reasoning-chevron-open'}`}
@@ -162,6 +175,9 @@ function ReasoningBlock({
   )
 }
 
-export default function ConversationMessage({ message }: ConversationMessageProps): React.JSX.Element {
-  return <MessageBody message={message} />
+export default function ConversationMessage({
+  message,
+  onPreviewImage
+}: ConversationMessageProps): React.JSX.Element {
+  return <MessageBody message={message} onPreviewImage={onPreviewImage} />
 }
