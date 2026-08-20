@@ -1,12 +1,12 @@
 import axios, { isAxiosError } from 'axios'
 import { parseRemoteFirmwareList, type FirmwareSelectionEntry } from '../../../shared/firmware'
+import { isSupportedEspFirmwareImage } from '../utils/device/firmwareImage'
 
 const API_PATH = {
   latest: '/firmwares/uiflow2/latest'
 } as const
 
 const REQUEST_TIMEOUT_MS = 30_000
-const ESP_IMAGE_MAGIC = 0xe9
 
 type FirmwareRequestErrorKind =
   | 'timeout'
@@ -150,10 +150,10 @@ export async function downloadRemoteFirmware(
     if (data.byteLength === 0) {
       throw new FirmwareRequestError('download', 'The downloaded firmware is empty.')
     }
-    if (data[0] !== ESP_IMAGE_MAGIC) {
+    if (!isSupportedEspFirmwareImage(data)) {
       throw new FirmwareRequestError(
         'download',
-        'The downloaded file is not a valid ESP firmware image.'
+        'The downloaded file is not a supported ESP firmware image (expected an image header at 0x0, 0x1000, or 0x2000).'
       )
     }
     return data
