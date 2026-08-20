@@ -30,6 +30,12 @@ const WINDOW_MIN_HEIGHT = 640
 const BASE_DESIGN_WIDTH = 1440
 const BASE_DESIGN_HEIGHT = 900
 
+const ALLOWED_SESSION_PERMISSIONS = new Set(['serial', 'clipboard-sanitized-write'])
+
+function isAllowedSessionPermission(permission: string): boolean {
+  return ALLOWED_SESSION_PERMISSIONS.has(permission)
+}
+
 async function createWindow(
   projectService: ProjectService,
   userModelService: UserModelService,
@@ -106,11 +112,18 @@ async function createWindow(
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
-  // Allow Web Serial API permission requests
+  // Allow only the permissions used by the app's main window.
+  mainWindow.webContents.session.setPermissionCheckHandler((webContents, permission) => {
+    return (
+      webContents === mainWindow.webContents && isAllowedSessionPermission(permission as string)
+    )
+  })
+
   mainWindow.webContents.session.setPermissionRequestHandler(
-    (_webContents, permission, callback) => {
-      if ((permission as string) === 'serial') callback(true)
-      else callback(false)
+    (webContents, permission, callback) => {
+      callback(
+        webContents === mainWindow.webContents && isAllowedSessionPermission(permission as string)
+      )
     }
   )
 

@@ -1,4 +1,5 @@
 import { useEffect, useImperativeHandle, useRef, forwardRef } from 'react'
+import { toast } from '@heroui/react'
 import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
@@ -333,9 +334,35 @@ const TerminalView = forwardRef<TerminalViewHandle, TerminalViewProps>(function 
       processLineInput(data.slice(textStart))
     })
 
+    const copyTerminalSelection = async (): Promise<void> => {
+      const selection = term.getSelection()
+      if (!selection) return
+
+      try {
+        await navigator.clipboard.writeText(selection)
+      } catch {
+        toast.danger('Failed to copy terminal selection.')
+      }
+    }
+
     term.attachCustomKeyEventHandler((event) => {
-      if (!connectedRef.current || event.type !== 'keydown') return true
-      if (!event.ctrlKey || event.metaKey || event.altKey) return true
+      if (event.type !== 'keydown') return true
+
+      const key = event.key.toLowerCase()
+      const isCtrlChord = event.ctrlKey && !event.metaKey && !event.altKey
+      const isWindowsOrLinuxCopy =
+        window.electron.process.platform !== 'darwin' &&
+        isCtrlChord &&
+        key === 'c' &&
+        (event.shiftKey || term.hasSelection())
+
+      if (isWindowsOrLinuxCopy) {
+        event.preventDefault()
+        void copyTerminalSelection()
+        return false
+      }
+
+      if (!connectedRef.current || !isCtrlChord) return true
 
       if (event.key === ']') {
         event.preventDefault()
@@ -343,7 +370,6 @@ const TerminalView = forwardRef<TerminalViewHandle, TerminalViewProps>(function 
         return false
       }
 
-      const key = event.key.toLowerCase()
       const ctrlKeyMap: Record<string, string> = {
         c: MP_CTRL.interrupt,
         d: MP_CTRL.softReboot,
