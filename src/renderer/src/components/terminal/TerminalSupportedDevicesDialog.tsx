@@ -33,7 +33,7 @@ export default function TerminalSupportedDevicesDialog({
             <ModalHeader>
               <ModalHeading className="text-lg">Terminal Supported Devices</ModalHeading>
               <p className="text-[12px] text-muted">
-                Terminal is available for the following devices.
+                The following devices require UIFlow2 v2.5.1 or later to use Terminal.
               </p>
             </ModalHeader>
             <ModalBody className="px-2 pb-3 pt-1">

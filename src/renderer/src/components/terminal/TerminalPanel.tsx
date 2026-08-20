@@ -88,14 +88,15 @@ export default function TerminalPanel(): React.JSX.Element {
     <Tooltip delay={300}>
       <Tooltip.Trigger className="inline-flex">
         <span className="inline-flex">
-          <button
-            type="button"
-            className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted outline-none transition-colors hover:bg-soft hover:text-ink focus-visible:ring-2 focus-visible:ring-accent"
-            onClick={() => setIsSupportedDevicesOpen(true)}
+          <Button
+            isIconOnly
+            variant="ghost"
+            className="size-7 min-w-7 shrink-0 cursor-pointer"
+            onPress={() => setIsSupportedDevicesOpen(true)}
             aria-label="View Terminal supported devices"
           >
             <QuestionCircleIcon size={12} />
-          </button>
+          </Button>
         </span>
       </Tooltip.Trigger>
       <Tooltip.Content placement="top" showArrow>
