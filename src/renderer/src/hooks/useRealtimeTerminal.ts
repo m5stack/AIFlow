@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { buildRealtimeWsUrl } from '../utils/terminal/realtimeWsUrl'
 import { formatTerminalSystemLine } from '../utils/terminal/terminalOutput'
-import { hasReplPrompt, initReplSession } from '../utils/terminal/replInit'
 import { PasteFlow, mayEnterPasteMode, sendKeyboardPayload } from '../utils/terminal/pasteFlow'
 import { isWsHeartbeatMessage, parseRealtimeMessage } from '../utils/terminal/realtimeMessage'
 
@@ -57,9 +56,6 @@ export function useRealtimeTerminal(
   const pendingOutputRef = useRef<string[]>([])
   const pasteFlowRef = useRef(new PasteFlow())
   const connectAttemptRef = useRef(0)
-  const replInitSessionRef = useRef(0)
-  const replInitGotResponseRef = useRef(false)
-  const replInitOutputBufferRef = useRef('')
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const sessionDeviceIdRef = useRef('')
   const autoConnectDeviceIdRef = useRef('')
@@ -67,20 +63,6 @@ export function useRealtimeTerminal(
   const setTerminalStatus = useCallback((nextStatus: RealtimeTerminalStatus): void => {
     statusRef.current = nextStatus
     setStatusState(nextStatus)
-  }, [])
-
-  const cancelReplInitRetry = useCallback((): void => {
-    replInitSessionRef.current += 1
-    replInitGotResponseRef.current = false
-    replInitOutputBufferRef.current = ''
-  }, [])
-
-  const noteReplInitOutput = useCallback((output: string): void => {
-    if (replInitGotResponseRef.current || !output) return
-    replInitOutputBufferRef.current += output
-    if (hasReplPrompt(replInitOutputBufferRef.current)) {
-      replInitGotResponseRef.current = true
-    }
   }, [])
 
   const clearHeartbeat = useCallback((): void => {
@@ -161,18 +143,6 @@ export function useRealtimeTerminal(
     sendKeyboardPayload((chunk) => ws.send(chunk), payload)
   }, [])
 
-  const scheduleReplInit = useCallback(async (): Promise<void> => {
-    const sessionId = ++replInitSessionRef.current
-    replInitGotResponseRef.current = false
-    replInitOutputBufferRef.current = ''
-
-    await initReplSession(sendRawPayload, {
-      shouldContinue: () =>
-        sessionId === replInitSessionRef.current && wsRef.current?.readyState === WebSocket.OPEN,
-      hasResponse: () => replInitGotResponseRef.current
-    })
-  }, [sendRawPayload])
-
   const sendPasteInput = useCallback(
     (data: string): void => {
       const flow = pasteFlowRef.current
@@ -191,7 +161,6 @@ export function useRealtimeTerminal(
 
       const message = parseRealtimeMessage(raw)
       if (!message) {
-        noteReplInitOutput(raw)
         deliverDeviceOutput(raw)
         return
       }
@@ -201,16 +170,13 @@ export function useRealtimeTerminal(
           onClientConnected()
           break
         case 'deviceLog':
-          noteReplInitOutput(message.payload)
           deliverDeviceOutput(message.payload)
           break
         case 'deviceConnected':
           writeDeviceStatusLine('Device online')
-          void scheduleReplInit()
           break
         case 'deviceOffline':
           writeDeviceStatusLine('Device offline')
-          cancelReplInitRetry()
           break
         case 'error':
           throw new Error(message.payload || 'Connection error')
@@ -218,19 +184,12 @@ export function useRealtimeTerminal(
           break
       }
     },
-    [
-      cancelReplInitRetry,
-      deliverDeviceOutput,
-      noteReplInitOutput,
-      scheduleReplInit,
-      writeDeviceStatusLine
-    ]
+    [deliverDeviceOutput, writeDeviceStatusLine]
   )
 
   const disconnect = useCallback(
     async (options?: { silent?: boolean }): Promise<void> => {
       connectAttemptRef.current += 1
-      cancelReplInitRetry()
       pasteFlowRef.current.reset()
       clearHeartbeat()
       const ws = wsRef.current
@@ -269,7 +228,7 @@ export function useRealtimeTerminal(
       setTerminalStatus('idle')
       setErrorMessage('')
     },
-    [cancelReplInitRetry, clearHeartbeat, setTerminalStatus, writeSystemLine]
+    [clearHeartbeat, setTerminalStatus, writeSystemLine]
   )
 
   const connect = useCallback(async (): Promise<boolean> => {
@@ -361,10 +320,6 @@ export function useRealtimeTerminal(
 
       if (attemptId !== connectAttemptRef.current) return false
 
-      if (connected) {
-        void scheduleReplInit()
-      }
-
       return connected
     } catch (error) {
       if (attemptId !== connectAttemptRef.current) return false
@@ -391,7 +346,6 @@ export function useRealtimeTerminal(
     deviceId,
     disconnect,
     handleWsMessage,
-    scheduleReplInit,
     setTerminalStatus,
     startHeartbeat,
     writeSystemLine
